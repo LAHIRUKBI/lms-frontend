@@ -17,6 +17,13 @@ interface ClassCreateConfirmPopupProps {
     endTime: string;
     description?: string;
     coverImageFile?: File | null;
+    // අලුතින් එක් කළ properties වල Types
+    isFree?: boolean;
+    fee?: number;
+    billingType?: "monthly" | "fixed_months";
+    durationMonths?: number;
+    hasBatchLimit?: boolean;
+    batchLimit?: number;
   };
 }
 
@@ -71,16 +78,37 @@ export default function ClassCreateConfirmPopup({
             <span className="text-slate-500 font-medium">Time:</span>
             <span className="font-bold text-slate-800 dark:text-white">{classData.startTime} - {classData.endTime}</span>
           </div>
+
+          {/* Pricing Info */}
+          <div className="flex justify-between pt-1 border-t dark:border-slate-800">
+            <span className="text-slate-500 font-medium">Class Fee:</span>
+            <span className={`font-bold ${classData.isFree ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-white"}`}>
+              {classData.isFree 
+                ? "Free Class" 
+                : `LKR ${Number(classData.fee || 0).toLocaleString()} (${classData.billingType === "fixed_months" ? `${classData.durationMonths} Months Plan` : "Monthly"})`
+              }
+            </span>
+          </div>
+
+          {/* Student Capacity / Batch Limit */}
+          <div className="flex justify-between">
+            <span className="text-slate-500 font-medium">Student Limit:</span>
+            <span className="font-bold text-slate-800 dark:text-white">
+              {classData.hasBatchLimit ? `${classData.batchLimit} Students Maximum` : "Unlimited Seats"}
+            </span>
+          </div>
+
           {classData.description && (
             <div className="flex flex-col gap-1 pt-1 border-t dark:border-slate-800">
               <span className="text-slate-500 font-medium">Description:</span>
               <span className="text-slate-700 dark:text-slate-300 italic">{classData.description}</span>
             </div>
           )}
+
           {classData.coverImageFile && (
             <div className="flex justify-between items-center pt-1 border-t dark:border-slate-800">
               <span className="text-slate-500 font-medium">Cover Photo:</span>
-              <span className="text-blue-600 dark:text-blue-400 font-semibold">{classData.coverImageFile.name}</span>
+              <span className="text-blue-600 dark:text-blue-400 font-semibold truncate max-w-[200px]">{classData.coverImageFile.name}</span>
             </div>
           )}
         </div>

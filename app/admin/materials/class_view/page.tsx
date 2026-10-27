@@ -5,7 +5,35 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Calendar, Clock, BookOpen, User, Loader2, ShieldAlert, Monitor, UserCheck, UserX, Trash2, Search, GraduationCap, Image as ImageIcon, Edit3, X, Check, CreditCard, ExternalLink, Users, ChevronLeft, ChevronRight, Bell, ChevronDown, ChevronUp, Link as LinkIcon, FileText, Ban } from "lucide-react";
+import { 
+  Calendar, 
+  Clock, 
+  BookOpen, 
+  User, 
+  Loader2, 
+  ShieldAlert, 
+  Monitor, 
+  UserCheck, 
+  UserX, 
+  Trash2, 
+  Search, 
+  GraduationCap, 
+  Image as ImageIcon, 
+  Edit3, 
+  X, 
+  Check, 
+  CreditCard, 
+  ExternalLink, 
+  Users, 
+  ChevronLeft, 
+  ChevronRight, 
+  Bell, 
+  ChevronDown, 
+  ChevronUp, 
+  Link as LinkIcon, 
+  Ban,
+  DollarSign
+} from "lucide-react";
 import { useTheme } from "@/app/context/ThemeContext";
 
 // Cloudinary HTTPS URLs සහ Local backend paths දෙකටම ගැලපෙන Helper ශ්‍රිතය
@@ -28,7 +56,7 @@ export default function AdminClassViewPage() {
 
   // Pagination State for each teacher's classes (teacherId -> pageNumber)
   const [teacherPages, setTeacherPages] = useState<{ [key: string]: number }>({});
-  const classesPerPage = 2; // එක් ගුරුවරයෙක් තුළ පන්ති 2 ක් පමණක් පෙන්වීමට
+  const classesPerPage = 2;
 
   // Pending Quick View Popup State (teacherId -> boolean)
   const [activePendingPopup, setActivePendingPopup] = useState<string | null>(null);
@@ -56,10 +84,16 @@ export default function AdminClassViewPage() {
     });
   };
 
-  // Admin Edit Class Modal States
+  // Admin Edit Class Modal States (Updated with Pricing & Limits)
   const [editingClass, setEditingClass] = useState<any | null>(null);
   const [editDescription, setEditDescription] = useState("");
   const [editCoverImage, setEditCoverImage] = useState<File | null>(null);
+  const [editIsFree, setEditIsFree] = useState(false);
+  const [editFee, setEditFee] = useState<string>("");
+  const [editBillingType, setEditBillingType] = useState<"monthly" | "fixed_months">("monthly");
+  const [editDurationMonths, setEditDurationMonths] = useState<string>("1");
+  const [editHasBatchLimit, setEditHasBatchLimit] = useState(false);
+  const [editBatchLimit, setEditBatchLimit] = useState<string>("");
   const [editLoading, setEditLoading] = useState(false);
 
   // Student Details Modal State (Free Card & Profile Info)
@@ -191,7 +225,19 @@ export default function AdminClassViewPage() {
     }
   };
 
-  // Handle Admin updating class cover and description
+  const handleOpenEditModal = (cls: any) => {
+    setEditingClass(cls);
+    setEditDescription(cls.description || "");
+    setEditCoverImage(null);
+    setEditIsFree(cls.isFree || false);
+    setEditFee(cls.fee ? String(cls.fee) : "");
+    setEditBillingType(cls.billingType || "monthly");
+    setEditDurationMonths(cls.durationMonths ? String(cls.durationMonths) : "1");
+    setEditHasBatchLimit(cls.hasBatchLimit || false);
+    setEditBatchLimit(cls.batchLimit ? String(cls.batchLimit) : "");
+  };
+
+  // Handle Admin updating class cover, description, pricing & limits
   const handleAdminUpdateClassSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingClass) return;
@@ -209,6 +255,12 @@ export default function AdminClassViewPage() {
       if (editCoverImage) {
         formData.append("coverImage", editCoverImage);
       }
+      formData.append("isFree", String(editIsFree));
+      formData.append("fee", editIsFree ? "0" : editFee);
+      formData.append("billingType", editIsFree ? "monthly" : editBillingType);
+      formData.append("durationMonths", !editIsFree && editBillingType === "fixed_months" ? editDurationMonths : "1");
+      formData.append("hasBatchLimit", String(editHasBatchLimit));
+      formData.append("batchLimit", editHasBatchLimit ? editBatchLimit : "0");
 
       await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/classes/admin/update/${editingClass._id}`, formData, {
         headers: {
@@ -311,10 +363,12 @@ export default function AdminClassViewPage() {
 
       {/* Admin Edit Class Modal */}
       {editingClass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 text-slate-900 dark:text-white text-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 text-slate-900 dark:text-white text-xs max-h-[92vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b pb-2.5 border-slate-200 dark:border-slate-800">
-              <h3 className="text-sm font-bold">Manage Class Info (Admin)</h3>
+              <h3 className="text-sm font-bold flex items-center gap-1.5">
+                <Edit3 size={15} className="text-blue-500" /> Manage Class Info & Pricing (Admin)
+              </h3>
               <button
                 onClick={() => setEditingClass(null)}
                 className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -323,7 +377,124 @@ export default function AdminClassViewPage() {
               </button>
             </div>
 
-            <form onSubmit={handleAdminUpdateClassSubmit} className="space-y-3">
+            <form onSubmit={handleAdminUpdateClassSubmit} className="space-y-3.5">
+              
+              {/* Fee & Billing Settings */}
+              <div className="p-3 rounded-2xl border bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/60 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-emerald-200/60 dark:border-emerald-900/60 pb-1.5">
+                  <label className="text-[11px] font-bold uppercase text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                    <DollarSign size={13} /> Class Fee / Pricing
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs font-bold cursor-pointer select-none text-emerald-700 dark:text-emerald-300">
+                    <input
+                      type="checkbox"
+                      checked={editIsFree}
+                      onChange={(e) => {
+                        setEditIsFree(e.target.checked);
+                        if (e.target.checked) setEditFee("");
+                      }}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    Free Class
+                  </label>
+                </div>
+
+                {!editIsFree ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Fee (LKR)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={editFee}
+                        onChange={(e) => setEditFee(e.target.value)}
+                        placeholder="e.g. 2500"
+                        className="w-full p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-none outline-none font-medium text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Payment Plan</label>
+                      <div className="flex items-center gap-2 pt-2">
+                        <label className="flex items-center gap-1 text-[11px] font-semibold cursor-pointer">
+                          <input
+                            type="radio"
+                            name="adminBillingType"
+                            value="monthly"
+                            checked={editBillingType === "monthly"}
+                            onChange={() => setEditBillingType("monthly")}
+                            className="text-emerald-600 w-3.5 h-3.5"
+                          />
+                          Monthly
+                        </label>
+                        <label className="flex items-center gap-1 text-[11px] font-semibold cursor-pointer">
+                          <input
+                            type="radio"
+                            name="adminBillingType"
+                            value="fixed_months"
+                            checked={editBillingType === "fixed_months"}
+                            onChange={() => setEditBillingType("fixed_months")}
+                            className="text-emerald-600 w-3.5 h-3.5"
+                          />
+                          Custom Mo
+                        </label>
+                      </div>
+                    </div>
+                    {editBillingType === "fixed_months" && (
+                      <div>
+                        <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Duration (Months)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="24"
+                          value={editDurationMonths}
+                          onChange={(e) => setEditDurationMonths(e.target.value)}
+                          placeholder="e.g. 3"
+                          className="w-full p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-none outline-none font-medium text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 italic">This class is set as completely Free.</p>
+                )}
+              </div>
+
+              {/* Batch Limit Settings */}
+              <div className="p-3 rounded-2xl border bg-violet-50/40 dark:bg-violet-950/20 border-violet-200/80 dark:border-violet-800/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase text-violet-700 dark:text-violet-400 flex items-center gap-1">
+                    <Users size={13} /> Batch Limit / Student Seats
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs font-bold cursor-pointer select-none text-violet-700 dark:text-violet-300">
+                    <input
+                      type="checkbox"
+                      checked={editHasBatchLimit}
+                      onChange={(e) => {
+                        setEditHasBatchLimit(e.target.checked);
+                        if (!e.target.checked) setEditBatchLimit("");
+                      }}
+                      className="rounded text-violet-600 focus:ring-violet-500 w-3.5 h-3.5"
+                    />
+                    Limit Seats
+                  </label>
+                </div>
+
+                {editHasBatchLimit && (
+                  <div>
+                    <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">Maximum Students Allowed</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editBatchLimit}
+                      onChange={(e) => setEditBatchLimit(e.target.value)}
+                      placeholder="e.g. 50"
+                      className="w-full p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-none outline-none font-medium text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Class Description</label>
                 <textarea
@@ -335,6 +506,7 @@ export default function AdminClassViewPage() {
                 ></textarea>
               </div>
 
+              {/* Cover Photo */}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
                   <ImageIcon size={12} /> Class Cover Photo
@@ -347,7 +519,7 @@ export default function AdminClassViewPage() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setEditingClass(null)}
@@ -361,7 +533,7 @@ export default function AdminClassViewPage() {
                   className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md shadow-blue-600/25 transition-all flex items-center gap-1.5"
                 >
                   {editLoading ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
-                  <span>Save</span>
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>
@@ -675,6 +847,10 @@ export default function AdminClassViewPage() {
                         {currentClasses.map((cls: any) => {
                           const clsRequests = classRequests.filter((req: any) => req.classId?._id === cls._id);
                           const totalStudentsCount = clsRequests.length;
+                          const approvedStudentsCount = clsRequests.filter((req: any) => req.status === 'Approved').length;
+
+                          // Check if batch is full
+                          const isFull = cls.hasBatchLimit && cls.batchLimit > 0 && approvedStudentsCount >= cls.batchLimit;
 
                           const query = (searchQueries[cls._id] || "").toLowerCase();
                           const filteredRequests = clsRequests.filter((req: any) =>
@@ -705,12 +881,20 @@ export default function AdminClassViewPage() {
                                       <span className="text-[9px] italic">No cover photo</span>
                                     </div>
                                   )}
+
+                                  {/* Price Tag Overlay on Cover */}
+                                  {cls.isFree ? (
+                                    <span className="absolute top-1.5 left-1.5 px-2 py-0.5 bg-emerald-600/95 text-white rounded-md text-[9px] font-black shadow-sm">
+                                      FREE
+                                    </span>
+                                  ) : cls.fee ? (
+                                    <span className="absolute top-1.5 left-1.5 px-2 py-0.5 bg-slate-900/90 text-white rounded-md text-[9px] font-black shadow-sm">
+                                      LKR {cls.fee.toLocaleString()}
+                                    </span>
+                                  ) : null}
+
                                   <button
-                                    onClick={() => {
-                                      setEditingClass(cls);
-                                      setEditDescription(cls.description || "");
-                                      setEditCoverImage(null);
-                                    }}
+                                    onClick={() => handleOpenEditModal(cls)}
                                     className="absolute top-1.5 right-1.5 bg-slate-900/70 hover:bg-slate-900 text-white px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-sm transition-all"
                                   >
                                     <Edit3 size={11} /> Edit
@@ -728,10 +912,38 @@ export default function AdminClassViewPage() {
                                     <span className="px-2.5 py-0.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-[10px] font-extrabold flex items-center gap-0.5">
                                       <Monitor size={10} /> {cls.mode}
                                     </span>
+
+                                    {/* Fee Badge */}
+                                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold flex items-center gap-0.5 ${
+                                      cls.isFree 
+                                        ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                                        : "bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                                    }`}>
+                                      <DollarSign size={10} className="shrink-0" />
+                                      {cls.isFree 
+                                        ? "Free" 
+                                        : `LKR ${Number(cls.fee || 0).toLocaleString()} ${cls.billingType === 'fixed_months' ? `(${cls.durationMonths || 1} Mo)` : '/ Mo'}`
+                                      }
+                                    </span>
+
+                                    {/* Batch Limit / Capacity Badge */}
+                                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold flex items-center gap-0.5 ${
+                                      isFull 
+                                        ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400" 
+                                        : cls.hasBatchLimit 
+                                          ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" 
+                                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                                    }`}>
+                                      <Users size={10} className="shrink-0" />
+                                      {cls.hasBatchLimit 
+                                        ? `${approvedStudentsCount}/${cls.batchLimit} Seats ${isFull ? '(Full)' : ''}`
+                                        : "Unlimited Seats"
+                                      }
+                                    </span>
                                   </div>
 
                                   <div className="px-2.5 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 rounded-lg text-[10px] font-bold flex items-center gap-1">
-                                    <Users size={11} /> Students: {totalStudentsCount}
+                                    <Users size={11} /> Requests: {totalStudentsCount}
                                   </div>
                                 </div>
 

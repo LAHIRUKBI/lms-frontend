@@ -5,7 +5,30 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Trash2, Calendar, Clock, Loader2, Search, CheckCircle2, AlertCircle, Users, User, Mail, Phone, Building, MapPin, Edit3, Link as LinkIcon, X, Save, PlayCircle, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { 
+  Trash2, 
+  Calendar, 
+  Clock, 
+  Loader2, 
+  Search, 
+  CheckCircle2, 
+  AlertCircle, 
+  Users, 
+  User, 
+  Mail, 
+  Phone, 
+  Building, 
+  MapPin, 
+  Edit3, 
+  Link as LinkIcon, 
+  X, 
+  Save, 
+  PlayCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus,
+  DollarSign
+} from "lucide-react";
 import ClassDeleteConfirmPopup from "@/app/components/ClassDeleteConfirmPopup";
 import CreateClassModal from "@/app/components/CreateClassModal";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -32,7 +55,7 @@ export default function ViewClassesPage() {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Pagination State for Classes (2 classes per page as requested)
+  // Pagination State for Classes (2 classes per page)
   const [currentClassPage, setCurrentClassPage] = useState(1);
   const classesPerPage = 2;
 
@@ -40,13 +63,19 @@ export default function ViewClassesPage() {
   const [studentPages, setStudentPages] = useState<{ [classId: string]: number }>({});
   const studentsPerPage = 4;
 
-  // Edit Form State
+  // Edit Form State (Existing + New Fields)
   const [editOnlineLink, setEditOnlineLink] = useState("");
   const [editProvideLater, setEditProvideLater] = useState(false);
   const [editLinkDisplayMode, setEditLinkDisplayMode] = useState("scheduled");
   const [editLinkStart, setEditLinkStart] = useState("");
   const [editLinkEnd, setEditLinkEnd] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [editIsFree, setEditIsFree] = useState(false);
+  const [editFee, setEditFee] = useState<string>("");
+  const [editBillingType, setEditBillingType] = useState<"monthly" | "fixed_months">("monthly");
+  const [editDurationMonths, setEditDurationMonths] = useState<string>("1");
+  const [editHasBatchLimit, setEditHasBatchLimit] = useState(false);
+  const [editBatchLimit, setEditBatchLimit] = useState<string>("");
 
   useEffect(() => {
     if (darkMode) {
@@ -114,6 +143,14 @@ export default function ViewClassesPage() {
     setEditLinkStart(cls.linkStartDateTime ? new Date(cls.linkStartDateTime).toISOString().slice(0, 16) : "");
     setEditLinkEnd(cls.linkEndDateTime ? new Date(cls.linkEndDateTime).toISOString().slice(0, 16) : "");
     setEditDescription(cls.description || "");
+
+    // Populate Pricing & Capacity into Edit States
+    setEditIsFree(cls.isFree || false);
+    setEditFee(cls.fee ? String(cls.fee) : "");
+    setEditBillingType(cls.billingType || "monthly");
+    setEditDurationMonths(cls.durationMonths ? String(cls.durationMonths) : "1");
+    setEditHasBatchLimit(cls.hasBatchLimit || false);
+    setEditBatchLimit(cls.batchLimit ? String(cls.batchLimit) : "");
   };
 
   const handleForceOpenNow = async (cls: any) => {
@@ -146,7 +183,14 @@ export default function ViewClassesPage() {
         linkDisplayMode: editLinkDisplayMode,
         linkStartDateTime: (editProvideLater || editLinkDisplayMode === 'immediate') ? null : editLinkStart,
         linkEndDateTime: (editProvideLater || editLinkDisplayMode === 'immediate') ? null : editLinkEnd,
-        description: editDescription
+        description: editDescription,
+        // Send updated pricing and limit fields
+        isFree: editIsFree,
+        fee: editIsFree ? 0 : Number(editFee) || 0,
+        billingType: editIsFree ? "monthly" : editBillingType,
+        durationMonths: !editIsFree && editBillingType === "fixed_months" ? Number(editDurationMonths) || 1 : 1,
+        hasBatchLimit: editHasBatchLimit,
+        batchLimit: editHasBatchLimit ? Number(editBatchLimit) || 0 : 0
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -242,7 +286,7 @@ export default function ViewClassesPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <h1 className={`text-2xl font-extrabold ${darkMode ? "text-white" : "text-slate-800"}`}>Your Created Classes</h1>
-            <p className={`text-xs ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Manage your classes, early class startup, and active online links.</p>
+            <p className={`text-xs ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Manage your classes, pricing, student enrollment limits, and active online links.</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -309,13 +353,25 @@ export default function ViewClassesPage() {
                 const isEditing = editingClassId === cls._id;
                 const classCoverUrl = getClassCoverImageUrl(cls.coverImage);
 
+                // Enrollment vs Batch Limit Calculation
+                const isFull = cls.hasBatchLimit && cls.batchLimit > 0 && enrolledStudents.length >= cls.batchLimit;
+
                 return (
                   <div key={cls._id} className={`p-5 rounded-2xl border shadow-sm flex flex-col gap-4 transition-all duration-300 ${darkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
                     
                     <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                       {classCoverUrl && (
-                        <div className={`w-full md:w-48 h-32 rounded-xl overflow-hidden border flex-shrink-0 ${darkMode ? "border-slate-800" : "border-slate-200"}`}>
+                        <div className={`w-full md:w-48 h-32 rounded-xl overflow-hidden border flex-shrink-0 relative ${darkMode ? "border-slate-800" : "border-slate-200"}`}>
                           <img src={classCoverUrl} alt={cls.grade} className="w-full h-full object-cover" />
+                          {cls.isFree ? (
+                            <span className="absolute top-2 left-2 px-2 py-0.5 bg-emerald-600/90 text-white rounded-md text-[10px] font-black shadow-sm">
+                              FREE
+                            </span>
+                          ) : cls.fee ? (
+                            <span className="absolute top-2 left-2 px-2 py-0.5 bg-slate-900/80 text-white rounded-md text-[10px] font-black shadow-sm">
+                              LKR {cls.fee.toLocaleString()}
+                            </span>
+                          ) : null}
                         </div>
                       )}
                       
@@ -326,6 +382,34 @@ export default function ViewClassesPage() {
                           </span>
                           <span className="px-2.5 py-0.5 bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-lg text-[11px] font-extrabold">{cls.medium}</span>
                           <span className="px-2.5 py-0.5 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-[11px] font-extrabold">{cls.mode}</span>
+
+                          {/* Fee Badge */}
+                          <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 ${
+                            cls.isFree 
+                              ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" 
+                              : "bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                          }`}>
+                            <DollarSign size={12} className="shrink-0" />
+                            {cls.isFree 
+                              ? "Free Class" 
+                              : `LKR ${Number(cls.fee || 0).toLocaleString()} ${cls.billingType === 'fixed_months' ? `(${cls.durationMonths || 1} Mo)` : '/ Mo'}`
+                            }
+                          </span>
+
+                          {/* Seat Capacity Badge */}
+                          <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 ${
+                            isFull 
+                              ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400" 
+                              : cls.hasBatchLimit 
+                                ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                          }`}>
+                            <Users size={12} className="shrink-0" />
+                            {cls.hasBatchLimit 
+                              ? `${enrolledStudents.length}/${cls.batchLimit} Seats ${isFull ? '(Batch Full)' : ''}`
+                              : "Unlimited Seats"
+                            }
+                          </span>
                         </div>
 
                         <h3 className={`text-base font-bold flex items-center gap-2 pt-0.5 ${darkMode ? "text-white" : "text-slate-800"}`}>
@@ -415,16 +499,135 @@ export default function ViewClassesPage() {
 
                     {/* Inline Edit Panel */}
                     {isEditing && (
-                      <div className={`p-4 rounded-xl border space-y-3 ${darkMode ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
-                        <div className="flex items-center justify-between">
+                      <div className={`p-4 rounded-xl border space-y-4 ${darkMode ? "bg-slate-800/80 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
+                        <div className="flex items-center justify-between border-b pb-2 dark:border-slate-700">
                           <h4 className="text-xs font-bold flex items-center gap-1.5">
-                            <Edit3 size={14} className="text-blue-500" /> Update Online Link & Availability
+                            <Edit3 size={14} className="text-blue-500" /> Update Class Settings & Availability
                           </h4>
                           <button onClick={() => setEditingClassId(null)} className="text-slate-400 hover:text-slate-600">
                             <X size={16} />
                           </button>
                         </div>
 
+                        {/* Fee & Billing Settings in Edit Mode */}
+                        <div className="p-3 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold uppercase text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <DollarSign size={13} /> Class Fee / Pricing
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editIsFree}
+                                onChange={(e) => {
+                                  setEditIsFree(e.target.checked);
+                                  if (e.target.checked) setEditFee("");
+                                }}
+                                className="rounded text-emerald-600 w-3.5 h-3.5"
+                              />
+                              Free Class
+                            </label>
+                          </div>
+
+                          {!editIsFree && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                              <div>
+                                <label className="text-[10px] font-bold uppercase block mb-1">Fee (LKR)</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={editFee}
+                                  onChange={(e) => setEditFee(e.target.value)}
+                                  placeholder="e.g. 2500"
+                                  className={`w-full p-2 rounded-xl border text-xs ${darkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-800"}`}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold uppercase block mb-1">Payment Plan</label>
+                                <div className="flex items-center gap-3 pt-2">
+                                  <label className="flex items-center gap-1 text-xs cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name="editBillingType"
+                                      value="monthly"
+                                      checked={editBillingType === "monthly"}
+                                      onChange={() => setEditBillingType("monthly")}
+                                      className="text-emerald-600 w-3.5 h-3.5"
+                                    />
+                                    Monthly
+                                  </label>
+                                  <label className="flex items-center gap-1 text-xs cursor-pointer">
+                                    <input
+                                      type="radio"
+                                      name="editBillingType"
+                                      value="fixed_months"
+                                      checked={editBillingType === "fixed_months"}
+                                      onChange={() => setEditBillingType("fixed_months")}
+                                      className="text-emerald-600 w-3.5 h-3.5"
+                                    />
+                                    Custom Mo
+                                  </label>
+                                </div>
+                              </div>
+                              {editBillingType === "fixed_months" && (
+                                <div>
+                                  <label className="text-[10px] font-bold uppercase block mb-1">Duration (Months)</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="24"
+                                    value={editDurationMonths}
+                                    onChange={(e) => setEditDurationMonths(e.target.value)}
+                                    placeholder="e.g. 3"
+                                    className={`w-full p-2 rounded-xl border text-xs ${darkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-800"}`}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Batch Limit Settings in Edit Mode */}
+                        <div className="p-3 rounded-xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold uppercase text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                              <Users size={13} /> Batch Limit / Capacity
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={editHasBatchLimit}
+                                onChange={(e) => {
+                                  setEditHasBatchLimit(e.target.checked);
+                                  if (!e.target.checked) setEditBatchLimit("");
+                                }}
+                                className="rounded text-violet-600 w-3.5 h-3.5"
+                              />
+                              Set Seat Limit
+                            </label>
+                          </div>
+
+                          {editHasBatchLimit && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] font-bold uppercase block mb-1">Max Students Allowed</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={editBatchLimit}
+                                  onChange={(e) => setEditBatchLimit(e.target.value)}
+                                  placeholder="e.g. 60"
+                                  className={`w-full p-2 rounded-xl border text-xs ${darkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-white border-slate-300 text-slate-800"}`}
+                                />
+                              </div>
+                              <p className="text-[10px] text-slate-400 self-end pb-1 italic">
+                                Total currently enrolled: {enrolledStudents.length} students.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Online Link Controls */}
                         {cls.mode === 'Online' && (
                           <div className="space-y-2.5">
                             <div className="flex items-center justify-between">
@@ -461,7 +664,7 @@ export default function ViewClassesPage() {
                                         onChange={(e) => setEditLinkDisplayMode(e.target.value)}
                                         className="text-blue-600"
                                       />
-                                      Open Immediately (දැන්ම ඕපන් කරන්න)
+                                      Open Immediately
                                     </label>
                                     <label className="flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer">
                                       <input
@@ -535,7 +738,7 @@ export default function ViewClassesPage() {
                     <div className={`pt-4 border-t ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
                       <div className="flex items-center justify-between mb-3">
                         <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${darkMode ? "text-slate-300" : "text-slate-700"}`}>
-                          <Users size={14} className="text-blue-500" /> Enrolled Students ({enrolledStudents.length})
+                          <Users size={14} className="text-blue-500" /> Enrolled Students ({enrolledStudents.length}{cls.hasBatchLimit ? ` / ${cls.batchLimit}` : ''})
                         </h4>
 
                         {totalStudentPages > 1 && (

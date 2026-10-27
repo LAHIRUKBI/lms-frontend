@@ -5,7 +5,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Plus, BookOpen, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Link as LinkIcon, MapPin, Building, X, ChevronDown } from "lucide-react";
+import { Plus, BookOpen, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Link as LinkIcon, MapPin, Building, X, ChevronDown, DollarSign, Users } from "lucide-react";
 import ClassCreateConfirmPopup from "@/app/components/ClassCreateConfirmPopup";
 import { useTheme } from "@/app/context/ThemeContext";
 
@@ -46,6 +46,15 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
   const [endTime, setEndTime] = useState("10:00");
   const [description, setDescription] = useState("");
   const [coverImage, setCoverImage] = useState<File | null>(null);
+
+  // --- අලුතින් එක් කළ Fee & Batch Limit States ---
+  const [isFree, setIsFree] = useState(false);
+  const [fee, setFee] = useState<string>("");
+  const [billingType, setBillingType] = useState<"monthly" | "fixed_months">("monthly");
+  const [durationMonths, setDurationMonths] = useState<string>("1");
+
+  const [hasBatchLimit, setHasBatchLimit] = useState(false);
+  const [batchLimit, setBatchLimit] = useState<string>("");
 
   // Custom Dropdown Open States
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -149,6 +158,21 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
       return;
     }
 
+    if (!isFree && (!fee || Number(fee) <= 0)) {
+      setMessage({ type: "error", text: "Please enter a valid class fee amount, or mark it as Free." });
+      return;
+    }
+
+    if (!isFree && billingType === "fixed_months" && (!durationMonths || Number(durationMonths) < 1)) {
+      setMessage({ type: "error", text: "Please enter a valid duration in months." });
+      return;
+    }
+
+    if (hasBatchLimit && (!batchLimit || Number(batchLimit) < 1)) {
+      setMessage({ type: "error", text: "Please specify the maximum number of students (Batch Limit)." });
+      return;
+    }
+
     // Validation for Scheduled Online Links against Recurring Day & Time
     if (mode === "Online" && !provideLater && linkDisplayMode === "scheduled") {
       if (linkStartDateTime && linkEndDateTime) {
@@ -219,6 +243,14 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
       if (description) formData.append("description", description);
       if (coverImage) formData.append("coverImage", coverImage);
 
+      // Fee & Limits append කිරීම
+      formData.append("isFree", String(isFree));
+      formData.append("fee", isFree ? "0" : fee);
+      formData.append("billingType", isFree ? "monthly" : billingType);
+      formData.append("durationMonths", !isFree && billingType === "fixed_months" ? durationMonths : "1");
+      formData.append("hasBatchLimit", String(hasBatchLimit));
+      formData.append("batchLimit", hasBatchLimit ? batchLimit : "0");
+
       const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/classes/create`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -234,6 +266,12 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
       setLinkEndDateTime("");
       setInstituteName("");
       setInstituteAddress("");
+      setIsFree(false);
+      setFee("");
+      setBillingType("monthly");
+      setDurationMonths("1");
+      setHasBatchLimit(false);
+      setBatchLimit("");
 
       setTimeout(() => {
         onClassCreated();
@@ -253,7 +291,6 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
         ref={dropdownRef}
         className={`relative w-full max-w-3xl rounded-2xl p-4 sm:p-6 shadow-2xl transition-colors duration-500 max-h-[92vh] overflow-y-auto ${darkMode ? "bg-slate-950 text-slate-100 border border-slate-800" : "bg-white text-slate-900"}`}
       >
-        
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -274,7 +311,13 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
             startTime,
             endTime,
             description,
-            coverImageFile: coverImage
+            coverImageFile: coverImage,
+            isFree,
+            fee: isFree ? 0 : Number(fee),
+            billingType,
+            durationMonths: Number(durationMonths),
+            hasBatchLimit,
+            batchLimit: Number(batchLimit)
           }}
         />
 
@@ -286,7 +329,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
               <h1 className={`text-lg sm:text-xl font-extrabold flex items-center gap-2 ${darkMode ? "text-white" : "text-slate-900"}`}>
                 <BookOpen className="text-blue-600 shrink-0" size={20} /> Create New Class
               </h1>
-              <p className={`text-xs mt-0.5 ${darkMode ? "text-slate-400" : "text-slate-600"}`}>Setup classes with immediate or scheduled online link access.</p>
+              <p className={`text-xs mt-0.5 ${darkMode ? "text-slate-400" : "text-slate-600"}`}>Setup classes with pricing, batch limit, and online or physical details.</p>
             </div>
           </div>
 
@@ -302,7 +345,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
             
             <form onSubmit={handleFormSubmitTrigger} className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
 
-              {/* Grade Selection (Custom Responsive Dropdown) */}
+              {/* Grade Selection */}
               <div className="space-y-1 relative">
                 <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Select Grade</label>
                 <div
@@ -348,7 +391,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
                 </div>
               )}
 
-              {/* Medium (Custom Responsive Dropdown) */}
+              {/* Medium */}
               <div className="space-y-1 relative">
                 <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Medium</label>
                 <div
@@ -374,7 +417,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
                 )}
               </div>
 
-              {/* Mode (Custom Responsive Dropdown) */}
+              {/* Mode */}
               <div className="space-y-1 relative">
                 <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Class Mode</label>
                 <div
@@ -397,6 +440,142 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+
+              {/* ================= NEW SECTION: CLASS PRICING & PAYMENT ================= */}
+              <div className="sm:col-span-3 p-3.5 rounded-2xl border bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/60 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 dark:border-emerald-900/60 pb-2">
+                  <label className={`text-xs font-bold uppercase flex items-center gap-1.5 ${darkMode ? "text-emerald-400" : "text-emerald-800"}`}>
+                    <DollarSign size={15} className="shrink-0" /> Class Fee / Pricing
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold cursor-pointer select-none text-emerald-700 dark:text-emerald-300">
+                    <input
+                      type="checkbox"
+                      checked={isFree}
+                      onChange={(e) => {
+                        setIsFree(e.target.checked);
+                        if (e.target.checked) setFee("");
+                      }}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 shrink-0"
+                    />
+                    Free Class (No Fee)
+                  </label>
+                </div>
+
+                {!isFree ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    {/* Fee Amount */}
+                    <div className="space-y-1">
+                      <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-600"}`}>Fee Amount (LKR)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={fee}
+                        onChange={(e) => setFee(e.target.value)}
+                        placeholder="e.g. 2500"
+                        required={!isFree}
+                        className={`w-full p-2.5 rounded-xl border-none outline-none font-medium text-xs ${darkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-700 shadow-sm"}`}
+                      />
+                    </div>
+
+                    {/* Billing Type */}
+                    <div className="space-y-1">
+                      <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-600"}`}>Payment Plan</label>
+                      <div className="flex items-center gap-3 pt-2">
+                        <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none">
+                          <input
+                            type="radio"
+                            name="billingType"
+                            value="monthly"
+                            checked={billingType === "monthly"}
+                            onChange={() => setBillingType("monthly")}
+                            className="text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                          />
+                          Monthly
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none">
+                          <input
+                            type="radio"
+                            name="billingType"
+                            value="fixed_months"
+                            checked={billingType === "fixed_months"}
+                            onChange={() => setBillingType("fixed_months")}
+                            className="text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                          />
+                          Custom Months
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Duration in Months */}
+                    {billingType === "fixed_months" && (
+                      <div className="space-y-1">
+                        <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-600"}`}>Duration (Months)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="24"
+                          value={durationMonths}
+                          onChange={(e) => setDurationMonths(e.target.value)}
+                          placeholder="e.g. 3 or 6"
+                          required={billingType === "fixed_months"}
+                          className={`w-full p-2.5 rounded-xl border-none outline-none font-medium text-xs ${darkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-700 shadow-sm"}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 italic">
+                    Students will be able to request and join this class completely free of charge.
+                  </p>
+                )}
+              </div>
+
+              {/* ================= NEW SECTION: BATCH LIMIT / SEATS ================= */}
+              <div className="sm:col-span-3 p-3.5 rounded-2xl border bg-violet-50/40 dark:bg-violet-950/20 border-violet-200/80 dark:border-violet-800/60 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <label className={`text-xs font-bold uppercase flex items-center gap-1.5 ${darkMode ? "text-violet-400" : "text-violet-800"}`}>
+                    <Users size={15} className="shrink-0" /> Student Capacity (Batch Limit)
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-bold cursor-pointer select-none text-violet-700 dark:text-violet-300">
+                    <input
+                      type="checkbox"
+                      checked={hasBatchLimit}
+                      onChange={(e) => {
+                        setHasBatchLimit(e.target.checked);
+                        if (!e.target.checked) setBatchLimit("");
+                      }}
+                      className="rounded text-violet-600 focus:ring-violet-500 w-4 h-4 shrink-0"
+                    />
+                    Set Seat Limit
+                  </label>
+                </div>
+
+                {hasBatchLimit ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-600"}`}>Maximum Students Allowed</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={batchLimit}
+                        onChange={(e) => setBatchLimit(e.target.value)}
+                        placeholder="e.g. 50"
+                        required={hasBatchLimit}
+                        className={`w-full p-2.5 rounded-xl border-none outline-none font-medium text-xs ${darkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-700 shadow-sm"}`}
+                      />
+                    </div>
+                    <div className="flex items-end pb-1.5">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+                        Once this limit is reached, new student requests will be automatically prevented.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 italic">
+                    Unlimited seats. Any registered student can send a request to join.
+                  </p>
                 )}
               </div>
 
@@ -516,7 +695,7 @@ export default function CreateClassModal({ isOpen, onClose, onClassCreated }: Cr
                 </div>
               )}
 
-              {/* Recurring Day of the Week (Custom Responsive Dropdown) */}
+              {/* Recurring Day of the Week */}
               <div className="space-y-1 relative">
                 <label className={`text-[11px] font-bold uppercase block ${darkMode ? "text-slate-400" : "text-slate-500"}`}>Recurring Class Day</label>
                 <div
