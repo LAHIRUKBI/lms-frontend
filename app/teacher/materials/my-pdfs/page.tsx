@@ -12,19 +12,19 @@ import {
   AlertCircle, 
   Globe, 
   Search, 
-  FileText,
-  Calendar,
-  X,
-  Check,
-  Gift,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Folder as FolderIcon,
-  FolderPlus,
-  ArrowLeft,
-  Edit2,
-  Move
+  FileText, 
+  Calendar, 
+  X, 
+  Check, 
+  Gift, 
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Folder as FolderIcon, 
+  FolderPlus, 
+  ArrowLeft, 
+  Edit2, 
+  Move 
 } from "lucide-react"; 
 import { useTheme } from "@/app/context/ThemeContext";
 import PublishSuccessPopup from "@/app/components/PublishSuccessPopup";
@@ -191,6 +191,7 @@ export default function MyPDFsPage() {
       });
       setMovingMaterial(null);
       fetchPdfs();
+      fetchFolders();
     } catch (err) {
       alert("Failed to move document");
     }
@@ -219,12 +220,12 @@ export default function MyPDFsPage() {
       });
       setPdfs(pdfs.filter((pdf) => pdf._id !== deleteItem._id));
       setDeleteItem(null);
+      fetchFolders();
     } catch (err) {
       alert("An error occurred while deleting the material.");
     }
   };
 
-  // Open Publish Modal for a single PDF
   const openPublishModal = (pdf: any) => {
     setSelectedFolderForPublish(null);
     setSelectedPdfForPublish(pdf);
@@ -233,7 +234,6 @@ export default function MyPDFsPage() {
     setPublishModalOpen(true);
   };
 
-  // Open Publish Modal for an entire Folder
   const openFolderPublishModal = (folder: any) => {
     setSelectedPdfForPublish(null);
     setSelectedFolderForPublish(folder);
@@ -242,7 +242,6 @@ export default function MyPDFsPage() {
     setPublishModalOpen(true);
   };
 
-  // Confirm publish for either PDF or Folder
   const handleConfirmPublish = async () => {
     const token = localStorage.getItem("token");
     try {
@@ -256,6 +255,7 @@ export default function MyPDFsPage() {
 
         setPdfs(pdfs.map(pdf => pdf._id === selectedPdfForPublish._id ? res.data.material : pdf));
         setPublishedItemName(selectedPdfForPublish.title);
+        fetchFolders(); // Parent folders වල state එකද refresh කිරීම
       } else if (selectedFolderForPublish) {
         const res = await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/${selectedFolderForPublish._id}/publish`, {
           classIds: selectedClassIds,
@@ -266,7 +266,8 @@ export default function MyPDFsPage() {
 
         setFolders(folders.map(f => f._id === selectedFolderForPublish._id ? res.data.folder : f));
         setPublishedItemName(`Folder: ${selectedFolderForPublish.name}`);
-        fetchPdfs(); // Refresh materials as child documents were also updated
+        fetchPdfs();
+        fetchFolders();
       }
 
       setPublishModalOpen(false);
@@ -288,6 +289,7 @@ export default function MyPDFsPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPdfs(pdfs.map(pdf => pdf._id === id ? res.data.material : pdf));
+      fetchFolders(); // Parent folder unpublish state එකට පත් කිරීම
     } catch (err: any) {
       alert("Failed to unpublish.");
     }
@@ -304,6 +306,7 @@ export default function MyPDFsPage() {
       });
       setFolders(folders.map(f => f._id === folderId ? res.data.folder : f));
       fetchPdfs();
+      fetchFolders();
     } catch (err) {
       alert("Failed to unpublish folder.");
     }
@@ -322,6 +325,7 @@ export default function MyPDFsPage() {
       });
 
       setPdfs(pdfs.map(item => item._id === pdf._id ? res.data.material : item));
+      fetchFolders();
     } catch (err: any) {
       alert("Failed to remove class.");
     }
@@ -396,7 +400,10 @@ export default function MyPDFsPage() {
       <MaterialUploadModal 
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={fetchPdfs}
+        onSuccess={() => {
+          fetchPdfs();
+          fetchFolders();
+        }}
         currentFolderId={currentFolder?._id || null}
       />
 
@@ -920,6 +927,7 @@ export default function MyPDFsPage() {
                                   isFree: false
                                 }, { headers: { Authorization: `Bearer ${token}` } });
                                 setPdfs(pdfs.map(item => item._id === pdf._id ? res.data.material : item));
+                                fetchFolders();
                               }}
                               className="hover:bg-emerald-500/20 rounded p-0.5 ml-0.5"
                               title="Remove from Free"
