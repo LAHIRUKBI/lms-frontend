@@ -1,5 +1,4 @@
 // src/app/teacher/materials/my-pdfs/page.tsx
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -8,7 +7,6 @@ import {
   FileStack, 
   BookOpen, 
   Loader2, 
-  Download, 
   Eye, 
   Trash2, 
   AlertCircle, 
@@ -21,14 +19,18 @@ import {
   Gift,
   ChevronLeft,
   ChevronRight,
-  Plus
+  Plus,
+  Folder as FolderIcon,
+  FolderPlus,
+  ArrowLeft,
+  Edit2,
+  Move
 } from "lucide-react"; 
 import { useTheme } from "@/app/context/ThemeContext";
 import PublishSuccessPopup from "@/app/components/PublishSuccessPopup";
 import DeleteConfirmPopup from "@/app/components/MeterialsDeleteConfirmPopup";
 import MaterialUploadModal from "@/app/components/MaterialUploadModal";
 
-// Helper Functions: For Correctly Retrieving Cloudinary URLs and Local URLs
 const getImageUrl = (imageSource: any) => {
   if (!imageSource) return null;
   const rawUrl = typeof imageSource === "object" ? imageSource.url : imageSource;
@@ -53,47 +55,68 @@ export default function MyPDFsPage() {
   const [publishedItemName, setPublishedItemName] = useState("");
   const [deleteItem, setDeleteItem] = useState<any>(null);
 
-  // Upload Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-
-  // Pagination State (4 items per page)
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  // Class Selection Modal States
+  // Publishing Modals
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [selectedPdfForPublish, setSelectedPdfForPublish] = useState<any>(null);
+  const [selectedFolderForPublish, setSelectedFolderForPublish] = useState<any>(null);
+
   const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
   const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
   const [isFreeChecked, setIsFreeChecked] = useState(false);
 
+  // Folder Management States
+  const [folders, setFolders] = useState<any[]>([]);
+  const [currentFolder, setCurrentFolder] = useState<any | null>(null);
+  const [folderHistory, setFolderHistory] = useState<any[]>([]);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [folderNameInput, setFolderNameInput] = useState("");
+  const [renamingFolder, setRenamingFolder] = useState<any | null>(null);
+
+  const [movingMaterial, setMovingMaterial] = useState<any | null>(null);
+  const [targetMoveFolderId, setTargetMoveFolderId] = useState<string>("");
+
   useEffect(() => {
-    fetchPdfs();
-    fetchTeacherClasses();
+    fetchInitialData();
   }, []);
 
-  // Reset to page 1 whenever search or tab changes
+  const fetchInitialData = async () => {
+    setLoading(true);
+    await Promise.all([fetchPdfs(), fetchFolders(), fetchTeacherClasses()]);
+    setLoading(false);
+  };
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, activeTab]);
+  }, [searchTerm, activeTab, currentFolder]);
 
-  // Fetch materials created by the teacher
   const fetchPdfs = async () => {
     const token = localStorage.getItem("token");
     try {
       const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/materials/my-materials`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const filteredPdfs = res.data.filter((m: any) => m.type === "pdf" || m.type === "paper");
-      setPdfs(filteredPdfs);
+      setPdfs(res.data.filter((m: any) => m.type === "pdf" || m.type === "paper"));
     } catch (err) {
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Fetch classes belonging to the teacher
+  const fetchFolders = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/my-folders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setFolders(res.data);
+    } catch (err) {
+      console.error("Error fetching folders:", err);
+    }
+  };
+
   const fetchTeacherClasses = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -106,7 +129,87 @@ export default function MyPDFsPage() {
     }
   };
 
-  // Handle material deletion
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!folderNameInput.trim()) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/create`, {
+        name: folderNameInput,
+        parentFolderId: currentFolder ? currentFolder._id : null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFolderNameInput("");
+      setIsCreateFolderOpen(false);
+      fetchFolders();
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to create folder");
+    }
+  };
+
+  const handleRenameFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!folderNameInput.trim() || !renamingFolder) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/${renamingFolder._id}/rename`, {
+        name: folderNameInput
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRenamingFolder(null);
+      setFolderNameInput("");
+      fetchFolders();
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to rename folder");
+    }
+  };
+
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!confirm("Are you sure you want to delete this folder? All contents will be moved to the upper directory.")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/${folderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchFolders();
+      fetchPdfs();
+    } catch (err) {
+      alert("Failed to delete folder");
+    }
+  };
+
+  const handleMoveMaterialConfirm = async () => {
+    if (!movingMaterial) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/move-material/${movingMaterial._id}`, {
+        folderId: targetMoveFolderId === "" ? null : targetMoveFolderId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMovingMaterial(null);
+      fetchPdfs();
+    } catch (err) {
+      alert("Failed to move document");
+    }
+  };
+
+  const enterFolder = (folder: any) => {
+    setFolderHistory([...folderHistory, folder]);
+    setCurrentFolder(folder);
+    setCurrentPage(1);
+  };
+
+  const navigateUp = () => {
+    const newHistory = [...folderHistory];
+    newHistory.pop();
+    setFolderHistory(newHistory);
+    setCurrentFolder(newHistory.length > 0 ? newHistory[newHistory.length - 1] : null);
+    setCurrentPage(1);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteItem) return;
     try {
@@ -121,37 +224,60 @@ export default function MyPDFsPage() {
     }
   };
 
-  // Open the class selection modal for publishing
+  // Open Publish Modal for a single PDF
   const openPublishModal = (pdf: any) => {
+    setSelectedFolderForPublish(null);
     setSelectedPdfForPublish(pdf);
     setSelectedClassIds(pdf.classIds ? pdf.classIds.map((c: any) => c._id || c) : []);
     setIsFreeChecked(pdf.isFree || false);
     setPublishModalOpen(true);
   };
 
-  // Confirm and publish the material to selected classes and/or free status
-  const handleConfirmPublish = async () => {
-    if (!selectedPdfForPublish) return;
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/materials/${selectedPdfForPublish._id}/publish`, {
-        classIds: selectedClassIds,
-        isFree: isFreeChecked
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  // Open Publish Modal for an entire Folder
+  const openFolderPublishModal = (folder: any) => {
+    setSelectedPdfForPublish(null);
+    setSelectedFolderForPublish(folder);
+    setSelectedClassIds(folder.classIds ? folder.classIds.map((c: any) => c._id || c) : []);
+    setIsFreeChecked(folder.isFree || false);
+    setPublishModalOpen(true);
+  };
 
-      setPdfs(pdfs.map(pdf => pdf._id === selectedPdfForPublish._id ? res.data.material : pdf));
-      setPublishedItemName(selectedPdfForPublish.title);
+  // Confirm publish for either PDF or Folder
+  const handleConfirmPublish = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      if (selectedPdfForPublish) {
+        const res = await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/materials/${selectedPdfForPublish._id}/publish`, {
+          classIds: selectedClassIds,
+          isFree: isFreeChecked
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setPdfs(pdfs.map(pdf => pdf._id === selectedPdfForPublish._id ? res.data.material : pdf));
+        setPublishedItemName(selectedPdfForPublish.title);
+      } else if (selectedFolderForPublish) {
+        const res = await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/${selectedFolderForPublish._id}/publish`, {
+          classIds: selectedClassIds,
+          isFree: isFreeChecked
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setFolders(folders.map(f => f._id === selectedFolderForPublish._id ? res.data.folder : f));
+        setPublishedItemName(`Folder: ${selectedFolderForPublish.name}`);
+        fetchPdfs(); // Refresh materials as child documents were also updated
+      }
+
       setPublishModalOpen(false);
       setSelectedPdfForPublish(null);
+      setSelectedFolderForPublish(null);
       setIsPublishPopupOpen(true);
     } catch (err: any) {
       alert(err.response?.data?.message || "An error occurred while publishing.");
     }
   };
 
-  // Unpublish material completely
   const handleUnpublish = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -167,7 +293,22 @@ export default function MyPDFsPage() {
     }
   };
 
-  // Remove a specific class from published classes list
+  const handleFolderUnpublish = async (folderId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/${folderId}/publish`, {
+        classIds: [],
+        isFree: false
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFolders(folders.map(f => f._id === folderId ? res.data.folder : f));
+      fetchPdfs();
+    } catch (err) {
+      alert("Failed to unpublish folder.");
+    }
+  };
+
   const handleRemoveSingleClass = async (pdf: any, classIdToRemove: string) => {
     try {
       const updatedClassIds = (pdf.classIds || []).map((c: any) => c._id || c).filter((id: string) => id !== classIdToRemove);
@@ -186,7 +327,6 @@ export default function MyPDFsPage() {
     }
   };
 
-  // Toggle class selection in the publish modal
   const toggleClassSelection = (classId: string) => {
     if (selectedClassIds.includes(classId)) {
       setSelectedClassIds(selectedClassIds.filter(id => id !== classId));
@@ -195,7 +335,13 @@ export default function MyPDFsPage() {
     }
   };
 
-  // Filter PDFs based on search query and active tab
+  const currentLevelFolders = useMemo(() => {
+    return folders.filter((f) => {
+      if (!currentFolder) return !f.parentFolderId;
+      return f.parentFolderId === currentFolder._id;
+    });
+  }, [folders, currentFolder]);
+
   const filteredPdfs = useMemo(() => {
     return pdfs.filter((pdf) => {
       const matchesSearch = 
@@ -208,18 +354,20 @@ export default function MyPDFsPage() {
       else if (activeTab === "pending") matchesTab = pdf.status === "pending";
       else if (activeTab === "rejected") matchesTab = pdf.status === "rejected";
 
-      return matchesSearch && matchesTab;
-    });
-  }, [pdfs, searchTerm, activeTab]);
+      const matchesFolder = currentFolder 
+        ? pdf.folderId === currentFolder._id 
+        : (!pdf.folderId);
 
-  // Pagination Logic
+      return matchesSearch && matchesTab && matchesFolder;
+    });
+  }, [pdfs, searchTerm, activeTab, currentFolder]);
+
   const totalPages = Math.ceil(filteredPdfs.length / itemsPerPage);
   const paginatedPdfs = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredPdfs.slice(start, start + itemsPerPage);
   }, [filteredPdfs, currentPage]);
 
-  // Tab configurations
   const tabs = [
     { id: "all", label: "All Files" },
     { id: "published", label: "Published" },
@@ -245,28 +393,108 @@ export default function MyPDFsPage() {
         itemName={deleteItem?.title}
       />
 
-      {/* Upload Modal Component */}
       <MaterialUploadModal 
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        onSuccess={() => {
-          fetchPdfs();
-        }}
+        onSuccess={fetchPdfs}
+        currentFolderId={currentFolder?._id || null}
       />
 
-      {/* Class Selection & Free Option Modal for Publishing */}
+      {/* Create / Rename Folder Modal */}
+      {(isCreateFolderOpen || renamingFolder) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-sm p-5 rounded-2xl shadow-xl border ${darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-900"}`}>
+            <h3 className="text-sm sm:text-base font-extrabold mb-2">
+              {renamingFolder ? "Rename Folder" : "Create New Folder"}
+            </h3>
+            <p className="text-xs text-slate-400 mb-3">
+              {renamingFolder ? "Enter the new name for this folder." : currentFolder ? `Creating sub-folder inside "${currentFolder.name}"` : "Create a folder in the main directory."}
+            </p>
+            <form onSubmit={renamingFolder ? handleRenameFolder : handleCreateFolder}>
+              <input 
+                type="text" 
+                value={folderNameInput} 
+                onChange={(e) => setFolderNameInput(e.target.value)} 
+                placeholder="e.g. 2024 Revision Papers"
+                required
+                className={`w-full px-3 py-2 rounded-xl text-xs border outline-none mb-4 focus:ring-2 focus:ring-orange-500 ${darkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-slate-50 border-slate-300 text-slate-900"}`} 
+              />
+              <div className="flex justify-end gap-2">
+                <button 
+                  type="button" 
+                  onClick={() => { setIsCreateFolderOpen(false); setRenamingFolder(null); }} 
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg ${darkMode ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-700"}`}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-1.5 text-xs font-bold rounded-lg bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
+                >
+                  {renamingFolder ? "Update Name" : "Create Folder"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Move Material Modal */}
+      {movingMaterial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className={`w-full max-w-sm p-5 rounded-2xl shadow-xl border ${darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-900"}`}>
+            <h3 className="text-sm sm:text-base font-extrabold mb-1">Move Document</h3>
+            <p className="text-xs text-slate-400 mb-3 truncate">
+              Move <b>{movingMaterial.title}</b> to:
+            </p>
+            <select 
+              value={targetMoveFolderId} 
+              onChange={(e) => setTargetMoveFolderId(e.target.value)}
+              className={`w-full px-3 py-2 rounded-xl text-xs border outline-none mb-4 focus:ring-2 focus:ring-orange-500 ${darkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-slate-50 border-slate-300 text-slate-900"}`}
+            >
+              <option value="">📁 Main Directory (Root / No Folder)</option>
+              {folders.map(f => (
+                <option key={f._id} value={f._id}>📁 {f.name}</option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-2">
+              <button 
+                type="button" 
+                onClick={() => setMovingMaterial(null)} 
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg ${darkMode ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-700"}`}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={handleMoveMaterialConfirm} 
+                className="px-4 py-1.5 text-xs font-bold rounded-lg bg-orange-600 hover:bg-orange-700 text-white shadow-sm"
+              >
+                Move Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Class Selection & Free Option Modal for Publishing (PDF OR FOLDER) */}
       {publishModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className={`w-full max-w-md p-4 sm:p-5 rounded-2xl shadow-2xl border ${darkMode ? "bg-slate-900 border-slate-800 text-white" : "bg-white border-slate-200 text-slate-900"}`}>
             <div className="flex justify-between items-center mb-3">
-              <h3 className="text-sm sm:text-base font-extrabold">Select Classes & Access to Publish</h3>
+              <h3 className="text-sm sm:text-base font-extrabold">
+                {selectedFolderForPublish ? `Publish Folder: ${selectedFolderForPublish.name}` : "Select Classes & Access to Publish"}
+              </h3>
               <button onClick={() => setPublishModalOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-500/10">
                 <X size={18} />
               </button>
             </div>
-            <p className="text-[11px] text-slate-400 mb-3">Choose classes where this document should be published, or make it Free for everyone.</p>
+            <p className="text-[11px] text-slate-400 mb-3">
+              {selectedFolderForPublish 
+                ? "Publishing this folder will publish all approved PDFs inside it to the selected classes."
+                : "Choose classes where this document should be published, or make it Free for everyone."}
+            </p>
 
-            {/* Free Option Toggle Selector */}
             <div 
               onClick={() => setIsFreeChecked(!isFreeChecked)}
               className={`mb-4 p-3 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${
@@ -352,28 +580,42 @@ export default function MyPDFsPage() {
                   My Documents
                 </h2>
                 <p className={`mt-0.5 text-[10px] sm:text-xs font-medium truncate ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-                  Manage, view, and publish your uploaded PDFs and Papers.
+                  Manage, organize in folders, and publish your uploaded PDFs, Papers, and entire Folders.
                 </p>
               </div>
             </div>
 
-            {/* Add PDF and Papers Button for Desktop */}
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="hidden sm:flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20 transition-all active:scale-[0.98] shrink-0"
-            >
-              <Plus size={16} /> Add PDF and Papers
-            </button>
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => { setFolderNameInput(""); setIsCreateFolderOpen(true); }}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-orange-500/30 text-orange-600 dark:text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 transition-all active:scale-[0.98]"
+              >
+                <FolderPlus size={16} /> New Folder
+              </button>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20 transition-all active:scale-[0.98]"
+              >
+                <Plus size={16} /> Add PDF and Papers
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-            {/* Add PDF and Papers Button for Mobile */}
-            <button
-              onClick={() => setIsUploadModalOpen(true)}
-              className="sm:hidden w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20 transition-all active:scale-[0.98]"
-            >
-              <Plus size={16} /> Add PDF and Papers
-            </button>
+            <div className="grid grid-cols-2 gap-2 w-full sm:hidden">
+              <button
+                onClick={() => { setFolderNameInput(""); setIsCreateFolderOpen(true); }}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold border border-orange-500/30 text-orange-600 dark:text-orange-400 bg-orange-500/10"
+              >
+                <FolderPlus size={16} /> New Folder
+              </button>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20"
+              >
+                <Plus size={16} /> Add PDF & Papers
+              </button>
+            </div>
 
             <div className="relative w-full">
               <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? "text-slate-500" : "text-slate-400"}`} />
@@ -390,9 +632,130 @@ export default function MyPDFsPage() {
           </div>
         </div>
 
-        {/* Filter Options */}
+        {/* Breadcrumbs Navigation */}
+        <div className="flex items-center gap-2 mb-4 p-2.5 rounded-xl border text-xs bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-x-auto shadow-sm">
+          <button 
+            onClick={() => { setCurrentFolder(null); setFolderHistory([]); }}
+            className={`font-bold flex items-center gap-1 transition-colors ${!currentFolder ? "text-orange-600" : "text-slate-400 hover:text-orange-500"}`}
+          >
+            Root Directory
+          </button>
+          {folderHistory.map((folder, idx) => (
+            <div key={folder._id} className="flex items-center gap-1.5 shrink-0">
+              <span className="text-slate-400">/</span>
+              <button 
+                onClick={() => {
+                  const sliced = folderHistory.slice(0, idx + 1);
+                  setFolderHistory(sliced);
+                  setCurrentFolder(folder);
+                }}
+                className={`font-bold transition-colors ${idx === folderHistory.length - 1 ? "text-orange-600" : "text-slate-400 hover:text-orange-500"}`}
+              >
+                {folder.name}
+              </button>
+            </div>
+          ))}
+          {currentFolder && (
+            <button 
+              onClick={navigateUp} 
+              className="ml-auto flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-orange-500 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <ArrowLeft size={13} /> Back
+            </button>
+          )}
+        </div>
+
+        {/* Folders List Grid (With Publish & Unpublish Controls) */}
+        {currentLevelFolders.length > 0 && (
+          <div className="mb-6">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+              Folders ({currentLevelFolders.length})
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {currentLevelFolders.map((f) => (
+                <div 
+                  key={f._id} 
+                  onClick={() => enterFolder(f)}
+                  className={`group relative p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-2.5 shadow-sm ${
+                    darkMode 
+                      ? "bg-slate-900/80 border-slate-800 hover:border-orange-500/50" 
+                      : "bg-white border-slate-200 hover:border-orange-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 truncate min-w-0">
+                      <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500 shrink-0">
+                        <FolderIcon size={16} />
+                      </div>
+                      <span className="text-xs font-bold truncate">{f.name}</span>
+                    </div>
+
+                    <div 
+                      className="flex items-center gap-1 shrink-0" 
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button 
+                        onClick={() => openFolderPublishModal(f)} 
+                        className={`p-1.5 rounded-lg border text-[11px] font-bold flex items-center gap-1 transition-all ${
+                          f.isPublished 
+                            ? "bg-blue-600 text-white border-blue-600" 
+                            : "bg-orange-600/10 hover:bg-orange-600 text-orange-600 hover:text-white border-orange-500/20"
+                        }`}
+                        title="Publish this entire folder"
+                      >
+                        <Globe size={11} /> {f.isPublished ? "Edit" : "Publish"}
+                      </button>
+
+                      {f.isPublished && (
+                        <button 
+                          onClick={() => handleFolderUnpublish(f._id)}
+                          className="p-1.5 rounded-lg hover:bg-rose-500/10 text-rose-500 text-[10px] font-bold border border-rose-500/20"
+                          title="Unpublish folder"
+                        >
+                          Unpublish
+                        </button>
+                      )}
+
+                      <button 
+                        onClick={() => { setRenamingFolder(f); setFolderNameInput(f.name); }} 
+                        className="p-1.5 rounded-lg hover:bg-slate-500/10 text-slate-400 hover:text-orange-500" 
+                        title="Rename"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteFolder(f._id)} 
+                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500" 
+                        title="Delete"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Folder Publish Badges */}
+                  {f.isPublished && (
+                    <div className="flex flex-wrap items-center gap-1 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[10px]">
+                      {f.isFree && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold flex items-center gap-1">
+                          <Gift size={9} /> Free
+                        </span>
+                      )}
+                      {f.classIds && f.classIds.map((cls: any) => (
+                        <span key={cls._id || cls} className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 font-bold">
+                          {cls.grade === "Other" ? cls.customGradeName : cls.grade || "Class"}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Filter Tabs */}
         <div className="mb-5">
-          {/* Mobile View */}
           <div className="grid grid-cols-2 gap-2 sm:hidden">
             {tabs.map((tab) => (
               <button
@@ -409,7 +772,6 @@ export default function MyPDFsPage() {
             ))}
           </div>
 
-          {/* Desktop View */}
           <div className="hidden sm:flex overflow-x-auto gap-1.5 pb-2 scrollbar-none">
             {tabs.map((tab) => (
               <button
@@ -436,7 +798,9 @@ export default function MyPDFsPage() {
           <div className={`py-12 px-4 flex flex-col items-center justify-center text-center rounded-2xl border ${darkMode ? "bg-slate-900/50 border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}>
             <FileStack size={36} className="text-slate-400 mb-2 opacity-60" />
             <h3 className={`text-sm font-bold mb-0.5 ${darkMode ? "text-slate-300" : "text-slate-700"}`}>No documents found</h3>
-            <p className="text-xs text-slate-400">Try changing your search terms or filter tabs.</p>
+            <p className="text-xs text-slate-400">
+              {currentFolder ? "This folder is empty or no documents match your filters." : "Try changing your search terms or filter tabs."}
+            </p>
           </div>
         ) : (
           <>
@@ -453,8 +817,6 @@ export default function MyPDFsPage() {
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-
-                        {/* Thumbnail / Cover Image */}
                         <div className={`relative w-12 h-16 sm:w-14 sm:h-18 rounded-xl overflow-hidden flex-shrink-0 border flex items-center justify-center ${darkMode ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}>
                           {coverSrc ? (
                             <img 
@@ -488,8 +850,15 @@ export default function MyPDFsPage() {
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
                       <div className="flex items-center justify-end sm:justify-start gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
+                        <button 
+                          onClick={() => { setMovingMaterial(pdf); setTargetMoveFolderId(pdf.folderId || ""); }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold text-[11px] border border-slate-200 dark:border-slate-700 hover:bg-slate-500/10 transition-colors"
+                          title="Move to another folder"
+                        >
+                          <Move size={12} /> <span className="hidden sm:inline">Move</span>
+                        </button>
+
                         {pdf.status === 'approved' && (
                           <>
                             <button 
