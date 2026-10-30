@@ -1,19 +1,37 @@
 // src/app/components/MaterialUploadModal.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useTheme } from "@/app/context/ThemeContext";
-import { UploadCloud, FileText, BookOpen, GraduationCap, AlignLeft, X, Image as ImageIcon, ChevronDown, ExternalLink, AlertTriangle } from "lucide-react";
+import { 
+  UploadCloud, 
+  FileText, 
+  BookOpen, 
+  GraduationCap, 
+  AlignLeft, 
+  X, 
+  Image as ImageIcon, 
+  ChevronDown, 
+  ExternalLink, 
+  AlertTriangle,
+  Folder as FolderIcon
+} from "lucide-react";
 import UploadSuccessPopup from "@/app/components/PdfUploadSuccessPopup";
 
 interface MaterialUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  currentFolderId?: string | null; // වර්තමානයේ විවෘතව ඇති folder එක auto-select කර ගැනීමට
 }
 
-export default function MaterialUploadModal({ isOpen, onClose, onSuccess }: MaterialUploadModalProps) {
+export default function MaterialUploadModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  currentFolderId = null 
+}: MaterialUploadModalProps) {
   const { darkMode } = useTheme();
   const [uploading, setUploading] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
@@ -25,6 +43,10 @@ export default function MaterialUploadModal({ isOpen, onClose, onSuccess }: Mate
 
   const [subjectCategory, setSubjectCategory] = useState("");
   const [gradeCategory, setGradeCategory] = useState("");
+
+  // Folder Support
+  const [availableFolders, setAvailableFolders] = useState<any[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>("");
 
   // Custom Dropdown Open/Close States
   const [isSubjectOpen, setIsSubjectOpen] = useState(false);
@@ -45,6 +67,26 @@ export default function MaterialUploadModal({ isOpen, onClose, onSuccess }: Mate
     grade: "",
     description: "",
   });
+
+  // Load Folders whenever modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchTeacherFolders();
+      setSelectedFolderId(currentFolderId || "");
+    }
+  }, [isOpen, currentFolderId]);
+
+  const fetchTeacherFolders = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/folders/my-folders`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAvailableFolders(res.data);
+    } catch (err) {
+      console.error("Failed to load folders:", err);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -133,6 +175,11 @@ export default function MaterialUploadModal({ isOpen, onClose, onSuccess }: Mate
     uploadData.append("type", materialType);
     uploadData.append("file", selectedFile);
     
+    // Pass selected folder if exists
+    if (selectedFolderId) {
+      uploadData.append("folderId", selectedFolderId);
+    }
+    
     if (selectedCover) {
       uploadData.append("coverImage", selectedCover);
     }
@@ -149,6 +196,7 @@ export default function MaterialUploadModal({ isOpen, onClose, onSuccess }: Mate
       setFormData({ title: "", subject: "", grade: "", description: "" });
       setSubjectCategory(""); 
       setGradeCategory(""); 
+      setSelectedFolderId("");
       removeFile();
       removeCover();
       onSuccess(); // Refresh list in parent page
@@ -263,6 +311,26 @@ export default function MaterialUploadModal({ isOpen, onClose, onSuccess }: Mate
                 />
                 Exam Paper (PDF)
               </label>
+            </div>
+          </div>
+
+          {/* Folder Selection Option */}
+          <div>
+            <label className={labelClass}>Select Target Folder (Optional)</label>
+            <div className="relative">
+              <FolderIcon size={14} className={`absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-slate-500" : "text-slate-400"}`} />
+              <select
+                value={selectedFolderId}
+                onChange={(e) => setSelectedFolderId(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">📁 Main Directory (Root / No Folder)</option>
+                {availableFolders.map((folder) => (
+                  <option key={folder._id} value={folder._id}>
+                    📁 {folder.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
