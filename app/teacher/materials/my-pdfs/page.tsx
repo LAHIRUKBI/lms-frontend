@@ -657,9 +657,9 @@ export default function MyPDFsPage() {
                 <span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold tabular-nums ${darkMode ? "border-[#456486] bg-[#1b3150] text-[#d6e6fb]" : "border-[#b9cbe2] bg-white text-[#294b75]"}`}>{currentLevelFolders.length} folders</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+              <div className="grid grid-cols-1 gap-x-2.5 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 {currentLevelFolders.map((f) => (
-                  <div key={f._id} className="group relative min-w-0 pt-[10px] transition-transform duration-200 hover:-translate-y-0.5">
+                  <div key={f._id} className="group relative z-0 min-w-0 pt-[10px] transition-transform duration-200 hover:z-40 hover:-translate-y-0.5 focus-within:z-40">
                     {/* Raised folder tab. The body below completes the folder silhouette. */}
                     <div
                       aria-hidden="true"
@@ -671,51 +671,49 @@ export default function MyPDFsPage() {
                       onClick={() => enterFolder(f)}
                       className={`relative z-10 min-h-[108px] min-w-0 cursor-pointer rounded-[13px] rounded-tl-[4px] border px-2.5 pb-2 pt-3 transition-all duration-200 ${darkMode ? "border-[#6385ad] bg-[#254568] text-[#f3f7fd] shadow-[0_4px_12px_rgba(0,0,0,0.22)] hover:border-[#88a9d0] hover:bg-[#2d527c]" : "border-[#193f6d] bg-[#244f82] text-white shadow-[0_4px_12px_rgba(31,71,120,0.2)] hover:border-[#315f96] hover:bg-[#2b5c94]"}`}
                     >
-                      <div className="flex min-w-0 items-start gap-2">
-                        <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border ${darkMode ? "border-[#7798c0] bg-[#3b6089] text-[#f7faff]" : "border-[#8eabd0] bg-[#dce9f8] text-[#1e4879]"}`}>
-                          <FolderOpen size={17} strokeWidth={2} />
-                        </div>
+                      {f.isPublished && (
+                        <span
+                          title="Published"
+                          aria-label="Published"
+                          className="pointer-events-none absolute right-2.5 top-2.5 z-30 flex h-3 w-3 items-center justify-center"
+                        >
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-70" />
+                          <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ring-2 ${darkMode ? "bg-emerald-300 ring-[#254568]" : "bg-emerald-300 ring-[#244f82]"}`} />
+                        </span>
+                      )}
 
+                      <div className="flex min-w-0 items-start gap-2 pr-5">
                         <div className="group/foldername relative min-w-0 flex-1" title={f.name}>
                           <h3 className="truncate text-[11px] font-bold leading-tight text-white">{f.name}</h3>
                           <p className={`mt-1 truncate text-[9px] ${darkMode ? "text-[#d0def0]" : "text-[#dbe8f8]"}`}>
                             {f.isPublished ? "Shared folder" : "Private folder"}
                           </p>
                           {/* Full folder name appears beneath the name when hovered. */}
-                          <span className={`pointer-events-none absolute left-0 top-full z-50 mt-1.5 hidden max-w-[220px] whitespace-normal break-words rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold leading-4 shadow-xl group-hover/foldername:block ${darkMode ? "border-[#7898bd] bg-[#142942] text-[#f1f6fd]" : "border-[#315f91] bg-[#173b64] text-white"}`}>
+                          <span className={`pointer-events-none absolute left-0 top-full z-[90] mt-1.5 hidden max-w-[220px] whitespace-normal break-words rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold leading-4 shadow-xl group-hover/foldername:block ${darkMode ? "border-[#7898bd] bg-[#142942] text-[#f1f6fd]" : "border-[#315f91] bg-[#173b64] text-white"}`}>
                             {f.name}
                           </span>
                         </div>
 
+                        {f.isFree && (
+                          <span
+                            title="Free public folder"
+                            className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[8px] font-bold leading-none ${darkMode ? "border-emerald-300/50 bg-emerald-300/15 text-emerald-200" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+                          >
+                            <Gift size={8} /> Free
+                          </span>
+                        )}
+
                         <ChevronRight size={13} className={`mt-0.5 shrink-0 transition-transform group-hover:translate-x-0.5 ${darkMode ? "text-[#d1e0f2]" : "text-[#d9e7f8]"}`} />
                       </div>
 
-                      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1" aria-label="Folder sharing status">
-                        {f.isPublished && (
-                          <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[8px] font-semibold ${darkMode ? "border-[#7898bd] bg-[#345777] text-[#f0f6ff]" : "border-[#87a4c8] bg-[#315f91] text-white"}`}>
-                            <Globe size={8} className="mr-0.5" /> Published
-                          </span>
-                        )}
-                        {f.isFree && (
-                          <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[8px] font-semibold ${darkMode ? "border-[#7898bd] bg-[#345777] text-[#f0f6ff]" : "border-[#87a4c8] bg-[#315f91] text-white"}`}>
-                            <Gift size={8} className="mr-0.5" /> Free
-                          </span>
-                        )}
-                        {f.classIds && f.classIds.length > 0 && (
-                          <span className={`text-[8px] ${darkMode ? "text-[#d0def0]" : "text-[#dbe8f8]"}`}>
-                            {f.classIds.length} class{f.classIds.length === 1 ? "" : "es"}
-                          </span>
-                        )}
-                      </div>
-
                       <div
-                        className={`mt-2 flex flex-wrap items-center justify-end gap-1 border-t border-dashed pt-1.5 ${darkMode ? "border-[#6385ad]" : "border-[#7292b9]"}`}
+                        className={`mt-2 flex min-w-0 flex-nowrap items-center justify-end gap-1 border-t border-dashed pt-1.5 ${darkMode ? "border-[#6385ad]" : "border-[#7292b9]"}`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
                           onClick={() => openFolderPublishModal(f)}
                           title={f.isPublished ? "Manage folder publishing" : "Publish folder"}
-                          className={`rounded-md border px-2 py-1 text-[9px] font-bold leading-none shadow-sm transition-colors ${f.isPublished ? (darkMode ? "border-[#7898bd] bg-[#355778] text-[#f0f6ff] hover:border-[#a3bddc] hover:bg-[#416990]" : "border-[#9ab2d1] bg-[#dce9f8] text-[#1e4879] hover:border-[#7394bd] hover:bg-[#cbdcf0]") : "border-[#f0a04b] bg-[#d96b16] text-white shadow-[0_2px_7px_rgba(217,107,22,0.25)] hover:border-[#ffc078] hover:bg-[#ed7b20]"}`}
+                          className={`shrink-0 whitespace-nowrap rounded-md border px-2 py-1 text-[9px] font-bold leading-none shadow-sm transition-colors ${f.isPublished ? (darkMode ? "border-[#7898bd] bg-[#355778] text-[#f0f6ff] hover:border-[#a3bddc] hover:bg-[#416990]" : "border-[#9ab2d1] bg-[#dce9f8] text-[#1e4879] hover:border-[#7394bd] hover:bg-[#cbdcf0]") : "border-[#f0a04b] bg-[#d96b16] text-white shadow-[0_2px_7px_rgba(217,107,22,0.25)] hover:border-[#ffc078] hover:bg-[#ed7b20]"}`}
                         >
                           {f.isPublished ? "Manage" : "Publish"}
                         </button>
@@ -725,7 +723,7 @@ export default function MyPDFsPage() {
                             onClick={() => handleFolderUnpublish(f._id)}
                             title="Unpublish folder"
                             aria-label="Unpublish folder"
-                            className="rounded-md border border-[#a51f35] bg-[#b4233b] px-2 py-1 text-[9px] font-bold leading-none text-white shadow-[0_2px_7px_rgba(180,35,59,0.22)] transition-colors hover:border-[#d34a60] hover:bg-[#cf304b]"
+                            className="shrink-0 whitespace-nowrap rounded-md border border-[#a51f35] bg-[#b4233b] px-2 py-1 text-[9px] font-bold leading-none text-white shadow-[0_2px_7px_rgba(180,35,59,0.22)] transition-colors hover:border-[#d34a60] hover:bg-[#cf304b]"
                           >
                             Unpublish
                           </button>
@@ -735,7 +733,7 @@ export default function MyPDFsPage() {
                           onClick={() => { setRenamingFolder(f); setFolderNameInput(f.name); }}
                           title="Rename folder"
                           aria-label={`Rename ${f.name}`}
-                          className={`rounded-md p-1.5 transition-colors ${darkMode ? "text-[#d5e4f7] hover:bg-[#416387] hover:text-white" : "text-[#dce9f8] hover:bg-[#3a6899] hover:text-white"}`}
+                          className={`shrink-0 rounded-md p-1.5 transition-colors ${darkMode ? "text-[#d5e4f7] hover:bg-[#416387] hover:text-white" : "text-[#dce9f8] hover:bg-[#3a6899] hover:text-white"}`}
                         >
                           <Edit2 size={11} />
                         </button>
@@ -744,12 +742,44 @@ export default function MyPDFsPage() {
                           onClick={() => handleDeleteFolder(f._id)}
                           title="Delete folder"
                           aria-label={`Delete ${f.name}`}
-                          className="rounded-md p-1.5 text-[#ffd5dc] transition-colors hover:bg-[#a51f35] hover:text-white"
+                          className="shrink-0 rounded-md p-1.5 text-[#ffd5dc] transition-colors hover:bg-[#a51f35] hover:text-white"
                         >
                           <Trash2 size={11} />
                         </button>
                       </div>
                     </div>
+
+                    {f.classIds && f.classIds.length > 0 && (
+                      <div
+                        className={`pointer-events-none absolute left-1/2 top-full z-[80] mt-1.5 hidden w-max max-w-[min(320px,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border p-2.5 shadow-2xl group-hover:block group-focus-within:block ${darkMode ? "border-[#58779d] bg-[#142942] text-[#edf5ff]" : "border-[#244f82] bg-white text-[#203d62]"}`}
+                        role="tooltip"
+                      >
+                        <p className={`mb-1.5 text-[9px] font-bold uppercase tracking-[0.12em] ${darkMode ? "text-[#a9c9f2]" : "text-[#56749b]"}`}>
+                          Published to classes
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {f.classIds.map((cls: any, index: number) => {
+                            const className = cls && typeof cls === "object"
+                              ? (cls.grade === "Other" ? (cls.customGradeName || "Other") : (cls.grade || "Class"))
+                              : "Class";
+                            const classDetails = cls && typeof cls === "object"
+                              ? [cls.medium, cls.mode].filter(Boolean).join(" · ")
+                              : "";
+                            const displayName = classDetails ? `${className} · ${classDetails}` : className;
+                            const classKey = cls && typeof cls === "object" ? (cls._id || `${displayName}-${index}`) : `${String(cls)}-${index}`;
+
+                            return (
+                              <span
+                                key={classKey}
+                                className={`rounded-md border px-2 py-1 text-[9px] font-semibold ${darkMode ? "border-[#456486] bg-[#203b5a] text-[#dceaff]" : "border-[#d4e0ef] bg-[#edf3fa] text-[#294b75]"}`}
+                              >
+                                {displayName}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
