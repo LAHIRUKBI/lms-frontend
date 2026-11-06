@@ -414,605 +414,715 @@ export default function TeacherQuizCreator({ initialQuiz, onCancel, onSaved }: T
 
 
   return (
-    <div 
+    <div
       ref={dropdownRef}
-      className={`w-full max-w-full sm:max-w-4xl md:max-w-5xl mx-auto p-2 sm:p-4 md:p-8 rounded-xl sm:rounded-3xl shadow-xl border transition-colors duration-300 space-y-6 overflow-x-hidden box-border ${
-        darkMode ? "bg-slate-900 text-slate-100 border-slate-800" : "bg-white text-slate-900 border-slate-200"
+      className={`w-full max-w-full mx-auto overflow-hidden rounded-2xl border transition-colors duration-300 box-border ${
+        darkMode
+          ? "bg-[#0f172a] text-[#f1f5f9] border-[#334155] shadow-[0_24px_70px_rgba(0,0,0,0.24)]"
+          : "bg-[#f8fafc] text-[#0f172a] border-[#e2e8f0] shadow-[0_24px_70px_rgba(31,53,39,0.08)]"
       }`}
     >
-      {/* Custom Notification Modal */}
+      {/* Notification Modal */}
       {notification.show && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className={`max-w-md w-full p-6 rounded-3xl shadow-2xl border text-center space-y-4 ${
-            darkMode ? "bg-slate-800 border-slate-700 text-slate-100" : "bg-white border-slate-100 text-slate-900"
-          }`}>
-            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
-              <AlertCircle size={24} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f172a]/65 backdrop-blur-md p-4">
+          <div
+            className={`w-full max-w-[420px] rounded-2xl border p-4 sm:p-5 text-center shadow-2xl ${
+              darkMode ? "bg-[#1e293b] border-[#334155] text-[#f1f5f9]" : "bg-white border-[#e2e8f0] text-[#0f172a]"
+            }`}
+          >
+            <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#fcebea] text-[#c34e48]">
+              <AlertCircle size={25} />
             </div>
-            <h3 className="text-lg font-bold">Attention Required</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{notification.message}</p>
+            <p className={`mb-1 text-[10px] font-bold uppercase tracking-[0.2em] ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
+              A small check
+            </p>
+            <h3 className="text-lg font-bold tracking-tight">Attention required</h3>
+            <p className={`mt-2 text-sm leading-6 ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>
+              {notification.message}
+            </p>
             <button
+              type="button"
               onClick={() => setNotification({ ...notification, show: false })}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-lg shadow-indigo-600/20"
+              className="mt-4 w-full rounded-xl bg-[#4f46e5] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#4338ca] focus:outline-none focus:ring-4 focus:ring-[#818cf8]/25"
             >
-              Okay, Got It
+              Okay, got it
             </button>
           </div>
         </div>
       )}
 
-      {/* Review Modal before Final Submission */}
+      {/* Review Modal */}
       {showReviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-          <div className={`max-w-3xl w-full max-h-[90vh] p-4 sm:p-8 rounded-3xl shadow-2xl border flex flex-col space-y-6 box-border ${
-            darkMode ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-          }`}>
-            <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-800">
-              <div>
-                <h2 className="text-lg sm:text-xl font-extrabold flex items-center gap-2">
-                  <Eye className="text-indigo-500 shrink-0" size={22} /> {isEditMode ? "Review Quiz Before Updating" : "Review Quiz Before Submission"}
+        <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-[#0f172a]/70 p-3 backdrop-blur-md sm:p-5">
+          <div
+            className={`my-auto flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border shadow-2xl ${
+              darkMode ? "bg-[#0f172a] border-[#334155] text-[#f1f5f9]" : "bg-white border-[#e2e8f0] text-[#0f172a]"
+            }`}
+          >
+            <div className={`flex items-start justify-between gap-4 border-b px-4 py-4 sm:px-5 ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+              <div className="min-w-0">
+                <div className={`mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] ${darkMode ? "text-[#a5b4fc]" : "text-[#6366f1]"}`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#818cf8]" /> Final check
+                </div>
+                <h2 className="flex items-center gap-2 text-base font-bold tracking-tight sm:text-lg">
+                  <Eye size={20} className="shrink-0 text-[#818cf8]" />
+                  {isEditMode ? "Review quiz before updating" : "Review quiz before submission"}
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {isEditMode ? "Check the revised quiz carefully before sending the changes for admin approval." : "Please inspect your quiz paper carefully before sending it to the admin."}
+                <p className={`mt-1.5 text-xs leading-5 sm:text-sm ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>
+                  {isEditMode
+                    ? "Check the revised quiz carefully before sending the changes for admin approval."
+                    : "Take one final look at your quiz paper before sending it to the admin."}
                 </p>
               </div>
-              <button onClick={() => setShowReviewModal(false)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0">
-                <X size={20} />
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                aria-label="Close review"
+                className={`shrink-0 rounded-xl p-2.5 transition ${darkMode ? "text-[#cbd5e1] hover:bg-[#334155] hover:text-white" : "text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#334155]"}`}
+              >
+                <X size={19} />
               </button>
             </div>
 
-            <div className="space-y-4 overflow-y-auto pr-1 flex-1">
-              <div className={`p-4 rounded-2xl border ${darkMode ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
-                <h3 className="font-bold text-base text-indigo-600 dark:text-indigo-400 break-words">{title}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 break-words">{description || "No description provided."}</p>
-                <div className="flex gap-3 sm:gap-4 mt-3 text-xs font-semibold flex-wrap">
-                  <span>⏱️ Duration: {duration} Mins</span>
-                  <span>📊 Total Marks: {totalQuizMarks}</span>
-                  <span>❓ Questions: {questions.length}</span>
+            <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-5">
+              <div className={`rounded-2xl border p-4 sm:p-5 ${darkMode ? "bg-[#1e293b] border-[#334155]" : "bg-[#f1f5f9] border-[#e2e8f0]"}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className={`mb-1 text-[10px] font-bold uppercase tracking-[0.17em] ${darkMode ? "text-[#a5b4fc]" : "text-[#6366f1]"}`}>
+                      Quiz overview
+                    </p>
+                    <h3 className="break-words text-base font-bold leading-snug sm:text-lg">{title}</h3>
+                    <p className={`mt-1.5 break-words text-xs leading-5 ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>
+                      {description || "No description provided."}
+                    </p>
+                  </div>
+                  <span className={`rounded-xl px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ${darkMode ? "bg-[#312e81] text-[#c7d2fe]" : "bg-[#eef2ff] text-[#4338ca]"}`}>
+                    {isEditMode ? "Editing" : "New quiz"}
+                  </span>
+                </div>
+                <div className={`mt-4 grid grid-cols-3 gap-2 border-t pt-4 ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+                  <div>
+                    <p className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Duration</p>
+                    <p className="mt-1 text-sm font-bold tabular-nums">{duration} mins</p>
+                  </div>
+                  <div>
+                    <p className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Total marks</p>
+                    <p className="mt-1 text-sm font-bold tabular-nums">{totalQuizMarks}</p>
+                  </div>
+                  <div>
+                    <p className={`text-[9px] font-bold uppercase tracking-wider ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Questions</p>
+                    <p className="mt-1 text-sm font-bold tabular-nums">{questions.length}</p>
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-bold">Question paper</h3>
+                  <span className={`text-[10px] font-semibold ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>{questions.length} items</span>
+                </div>
                 {questions.map((q, idx) => (
-                  <div key={q.id} className={`p-4 rounded-2xl border space-y-2 ${darkMode ? "bg-slate-800/30 border-slate-700" : "bg-white border-slate-200"}`}>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-indigo-500 uppercase">{q.type} • {q.marks} Marks</span>
-                      <span className="text-slate-400 font-semibold">Q{idx + 1}</span>
+                  <div
+                    key={q.id}
+                    className={`rounded-2xl border p-4 ${darkMode ? "bg-[#1e293b] border-[#334155]" : "bg-white border-[#e2e8f0]"}`}
+                  >
+                    <div className="mb-2.5 flex items-center justify-between gap-3">
+                      <span className={`rounded-lg px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider ${darkMode ? "bg-[#312e81] text-[#c7d2fe]" : "bg-[#eef2ff] text-[#4338ca]"}`}>
+                        {q.type} · {q.marks} marks
+                      </span>
+                      <span className={`text-[10px] font-bold tracking-wider ${darkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>Q{String(idx + 1).padStart(2, "0")}</span>
                     </div>
-                    <p className="font-bold text-sm break-words">{q.questionText}</p>
+                    <p className="break-words text-sm font-semibold leading-6">{q.questionText}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
+            <div className={`flex flex-col-reverse gap-2.5 border-t px-4 py-3 sm:flex-row sm:justify-end sm:px-5 ${darkMode ? "border-[#334155] bg-[#111827]" : "border-[#e2e8f0] bg-[#f8fafc]"}`}>
               <button
+                type="button"
                 onClick={() => setShowReviewModal(false)}
-                className="w-full sm:flex-1 py-3 px-4 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className={`rounded-xl border px-5 py-3 text-sm font-bold transition ${darkMode ? "border-[#475569] text-[#cbd5e1] hover:bg-[#334155]" : "border-[#e2e8f0] text-[#475569] hover:bg-[#f1f5f9]"}`}
               >
-                Back & Edit
+                Back & edit
               </button>
               <button
+                type="button"
                 onClick={handleSubmitToAdmin}
-                className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/20 transition flex items-center justify-center gap-2"
+                className="flex items-center justify-center gap-2 rounded-xl bg-[#4f46e5] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#4338ca] focus:outline-none focus:ring-4 focus:ring-[#818cf8]/25"
               >
-                <Send size={16} /> {isEditMode ? "Confirm & Update Quiz" : "Confirm & Send to Admin"}
+                <Send size={15} /> {isEditMode ? "Confirm & update quiz" : "Confirm & send to admin"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Header Section */}
-      <div className={`pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b ${
-        darkMode ? "border-slate-800" : "border-slate-200"
-      }`}>
-        <div>
-          <h1 className="text-lg sm:text-2xl md:text-3xl font-extrabold flex items-center gap-2.5 sm:gap-3 tracking-tight">
-            <div className={`p-2 sm:p-2.5 rounded-2xl border shadow-inner shrink-0 ${
-              darkMode ? "bg-indigo-950/50 text-indigo-400 border-indigo-900/50" : "bg-indigo-50 text-indigo-600 border-indigo-100"
-            }`}>
-              <FileText size={22} />
-            </div>
-            {isEditMode ? "Edit Quiz" : "Create New Quiz"}
-          </h1>
-          <p className={`text-xs sm:text-sm mt-1.5 font-medium ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-            {isEditMode
-              ? "Update the quiz details and questions. Your changes will be sent to the admin for approval again."
-              : "Design your quiz questions cleanly and submit them seamlessly for admin approval."}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-          {isEditMode && onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border ${darkMode ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"}`}
-            >
-              <ArrowLeft size={14} /> Back to My Quizzes
-            </button>
-          )}
-          <div className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm border ${
-            darkMode ? "bg-slate-800/80 border-slate-700/60 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
-          }`}>
-            <Award size={14} className="text-indigo-500 shrink-0" /> Total Marks: <span className="text-indigo-600 dark:text-indigo-400 font-bold">{totalQuizMarks}</span>
+      {/* Workspace Header */}
+      <div className={`relative overflow-hidden px-4 pb-4 pt-4 sm:px-6 sm:pb-5 sm:pt-5 lg:px-7 ${darkMode ? "bg-[#0f172a]" : "bg-[#f8fafc]"}`}>
+        <div className="relative flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-bold leading-tight tracking-[-0.04em] sm:text-2xl lg:text-[28px]">
+              {isEditMode ? "Refine your quiz." : "Create a thoughtful quiz."}
+            </h1>
+            <p className={`mt-2 max-w-2xl text-xs leading-6 sm:text-sm ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>
+              {isEditMode
+                ? "Make your updates, review each question and send the revised paper for approval."
+                : "Bring your lesson objectives together in a clear, well-structured assessment."}
+            </p>
           </div>
-          <div className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm border ${
-            darkMode ? "bg-slate-800/80 border-slate-700/60 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
-          }`}>
-            <HelpCircle size={14} className="text-indigo-500 shrink-0" /> Questions: <span className="text-indigo-600 dark:text-indigo-400 font-bold">{questions.length}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Step Indicator Tabs */}
-      <div className={`flex border-b text-xs sm:text-sm font-semibold overflow-x-auto w-full ${darkMode ? "border-slate-800" : "border-slate-200"}`}>
-        <button
-          type="button"
-          onClick={() => setStep(1)}
-          className={`pb-3 px-3 sm:px-6 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            step === 1
-              ? "border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 font-bold"
-              : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-          }`}
-        >
-          <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold shrink-0 ${
-            step === 1 ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" : darkMode ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-600"
-          }`}>1</span>
-          Basic Details
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (!title.trim()) {
-              triggerNotification("Please enter the quiz title first.");
-              return;
-            }
-            setStep(2);
-          }}
-          className={`pb-3 px-3 sm:px-6 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-            step === 2
-              ? "border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 font-bold"
-              : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-          }`}
-        >
-          <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold shrink-0 ${
-            step === 2 ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" : darkMode ? "bg-slate-800 text-slate-400" : "bg-slate-100 text-slate-600"
-          }`}>2</span>
-          Add Questions & Submit
-        </button>
-      </div>
-
-      {/* STEP 1: Basic Details */}
-      {step === 1 && (
-        <div className={`p-4 sm:p-6 md:p-8 rounded-2xl border shadow-sm backdrop-blur-md space-y-6 overflow-hidden box-border ${
-          darkMode ? "bg-slate-800/40 border-slate-700" : "bg-slate-50 border-slate-200"
-        }`}>
-          <h2 className={`font-bold text-sm sm:text-base ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
-            Step 1: Enter Basic Quiz Details
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-            <div className="sm:col-span-2">
-              <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>Quiz Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Grade 10 - Science Unit Test"
-                className={`w-full max-w-full box-border p-3 text-sm border rounded-xl outline-none transition-all shadow-sm ${
-                  darkMode ? "bg-slate-800 border-slate-600 text-white focus:border-indigo-400" : "bg-white border-slate-300 text-slate-900 focus:border-indigo-500"
-                }`}
-              />
-            </div>
-
-            <div className="relative">
-              <label className={`block text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
-                <Clock size={14} className="text-indigo-500 shrink-0" /> Duration
-              </label>
-              <div
-                onClick={() => setOpenDropdown(openDropdown === "duration" ? null : "duration")}
-                className={`w-full p-3 rounded-xl flex items-center justify-between cursor-pointer font-medium text-sm select-none ${
-                  darkMode ? "bg-slate-800 border border-slate-600 text-white" : "bg-white border border-slate-300 text-slate-900"
-                }`}
+          <div className="flex flex-wrap items-center gap-2">
+            {isEditMode && onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-semibold transition ${darkMode ? "border-[#475569] bg-[#1e293b] text-[#cbd5e1] hover:bg-[#334155]" : "border-[#e2e8f0] bg-white text-[#475569] hover:bg-[#f1f5f9]"}`}
               >
-                <span className="truncate">{durationLabels[duration] || `${duration} Mins`}</span>
-                <ChevronDown size={16} className={`transition-transform duration-200 shrink-0 ${openDropdown === "duration" ? "rotate-180" : ""}`} />
+                <ArrowLeft size={14} /> Back to my quizzes
+              </button>
+            )}
+            <div className={`flex items-center gap-2 rounded-xl border px-3.5 py-2.5 ${darkMode ? "border-[#475569] bg-[#1e293b]" : "border-[#e2e8f0] bg-white"}`}>
+              <Award size={15} className={darkMode ? "text-[#a5b4fc]" : "text-[#4f46e5]"} />
+              <span className={`text-[10px] font-semibold ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>Total marks</span>
+              <span className="text-sm font-bold tabular-nums">{totalQuizMarks}</span>
+            </div>
+            <div className={`flex items-center gap-2 rounded-xl border px-3.5 py-2.5 ${darkMode ? "border-[#475569] bg-[#1e293b]" : "border-[#e2e8f0] bg-white"}`}>
+              <HelpCircle size={15} className={darkMode ? "text-[#a5b4fc]" : "text-[#4f46e5]"} />
+              <span className={`text-[10px] font-semibold ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>Questions</span>
+              <span className="text-sm font-bold tabular-nums">{questions.length}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Step Navigation */}
+        <div className={`relative mt-4 grid grid-cols-2 gap-2 rounded-2xl border p-1.5 sm:mt-6 ${darkMode ? "border-[#334155] bg-[#0f172a]" : "border-[#e2e8f0] bg-[#f1f5f9]"}`}>
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className={`flex min-w-0 items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition sm:px-3 ${
+              step === 1
+                ? darkMode ? "bg-[#312e81] text-[#f1f5f9] shadow-sm" : "bg-white text-[#0f172a] shadow-[0_2px_10px_rgba(79,70,229,0.07)]"
+                : darkMode ? "text-[#94a3b8] hover:text-[#cbd5e1]" : "text-[#64748b] hover:text-[#475569]"
+            }`}
+          >
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${step === 1 ? "bg-[#4f46e5] text-white" : darkMode ? "bg-[#334155] text-[#94a3b8]" : "bg-[#e2e8f0] text-[#64748b]"}`}>01</span>
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-bold sm:text-sm">Basic details</span>
+              <span className={`mt-0.5 hidden text-[10px] sm:block ${step === 1 ? darkMode ? "text-[#c7d2fe]" : "text-[#64748b]" : "opacity-70"}`}>Set up your assessment</span>
+            </span>
+            {step === 1 && <CheckCircle size={15} className="ml-auto shrink-0 text-[#a5b4fc]" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!title.trim()) {
+                triggerNotification("Please enter the quiz title first.");
+                return;
+              }
+              setStep(2);
+            }}
+            className={`flex min-w-0 items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition sm:px-3 ${
+              step === 2
+                ? darkMode ? "bg-[#312e81] text-[#f1f5f9] shadow-sm" : "bg-white text-[#0f172a] shadow-[0_2px_10px_rgba(79,70,229,0.07)]"
+                : darkMode ? "text-[#94a3b8] hover:text-[#cbd5e1]" : "text-[#64748b] hover:text-[#475569]"
+            }`}
+          >
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${step === 2 ? "bg-[#4f46e5] text-white" : darkMode ? "bg-[#334155] text-[#94a3b8]" : "bg-[#e2e8f0] text-[#64748b]"}`}>02</span>
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-bold sm:text-sm">Questions & review</span>
+              <span className={`mt-0.5 hidden text-[10px] sm:block ${step === 2 ? darkMode ? "text-[#c7d2fe]" : "text-[#64748b]" : "opacity-70"}`}>Build your question paper</span>
+            </span>
+            {step === 2 && <CheckCircle size={15} className="ml-auto shrink-0 text-[#a5b4fc]" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Workspace Body */}
+      <div className="p-3 sm:p-4 lg:p-5">
+        {/* STEP 1: Basic Details */}
+        {step === 1 && (
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+            <section className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${darkMode ? "bg-[#0f172a] border-[#334155]" : "bg-white border-[#e2e8f0]"}`}>
+              <div className="mb-4 flex items-start gap-3">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl ${darkMode ? "bg-[#312e81] text-[#a5b4fc]" : "bg-[#eef2ff] text-[#4f46e5]"}`}>
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold tracking-tight sm:text-lg">Start with the essentials</h2>
+                  <p className={`mt-1 text-xs leading-5 ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>Give your quiz a clear identity and set the time students will have.</p>
+                </div>
               </div>
 
-              {openDropdown === "duration" && (
-                <div className={`absolute left-0 right-0 top-full mt-1.5 max-h-52 overflow-y-auto rounded-xl shadow-xl z-30 border ${
-                  darkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-700"
-                }`}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_170px]">
+                <div className="min-w-0">
+                  <label className={`mb-2 block text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>Quiz title <span className="text-[#6366f1]">*</span></label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Grade 10 · ICT Unit 02"
+                    className={`w-full rounded-xl border px-3 py-2.5 text-xs outline-none transition placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-4 focus:ring-[#818cf8]/15 ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                  />
+                </div>
+
+                <div className="relative min-w-0">
+                  <label className={`mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>
+                    <Clock size={13} className={darkMode ? "text-[#818cf8]" : "text-[#6366f1]"} /> Duration
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setOpenDropdown(openDropdown === "duration" ? null : "duration")}
+                    className={`flex w-full items-center justify-between gap-2 rounded-xl border px-4 py-3.5 text-left text-sm font-semibold outline-none transition focus:border-[#6366f1] ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                  >
+                    <span className="truncate">{durationLabels[duration] || `${duration} Mins`}</span>
+                    <ChevronDown size={16} className={`shrink-0 text-[#64748b] transition-transform ${openDropdown === "duration" ? "rotate-180" : ""}`} />
+                  </button>
+                  {openDropdown === "duration" && (
+                    <div className={`absolute left-0 right-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-xl border p-1.5 shadow-xl ${darkMode ? "bg-[#1e293b] border-[#475569]" : "bg-white border-[#e2e8f0]"}`}>
+                      {[
+                        { val: "30", label: "30 Mins" },
+                        { val: "60", label: "1 Hour" },
+                        { val: "90", label: "1.5 Hours" },
+                        { val: "120", label: "2 Hours" },
+                        { val: "150", label: "2.5 Hours" },
+                        { val: "180", label: "3 Hours" }
+                      ].map((item) => (
+                        <button
+                          type="button"
+                          key={item.val}
+                          onClick={() => { setDuration(item.val); setOpenDropdown(null); }}
+                          className={`w-full rounded-lg px-3 py-2.5 text-left text-xs font-semibold transition ${duration === item.val ? darkMode ? "bg-[#312e81] text-[#c7d2fe]" : "bg-[#eef2ff] text-[#4338ca]" : darkMode ? "text-[#cbd5e1] hover:bg-[#334155]" : "text-[#475569] hover:bg-[#f1f5f9]"}`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className={`mb-2 block text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>Description <span className={`font-medium normal-case tracking-normal ${darkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>(optional)</span></label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Briefly describe the topics, learning outcomes or instructions for this quiz..."
+                  className={`w-full resize-y rounded-xl border px-3 py-2.5 text-xs leading-6 outline-none transition placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-4 focus:ring-[#818cf8]/15 ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                  rows={5}
+                />
+              </div>
+
+              <div className={`mt-4 flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+                <p className={`text-[10px] leading-5 ${darkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>
+                  You can return to these details at any time.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleNextToQuestions}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4f46e5] px-5 py-3.5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(79,70,229,0.16)] transition hover:-translate-y-0.5 hover:bg-[#4338ca] focus:outline-none focus:ring-4 focus:ring-[#818cf8]/25"
+                >
+                  Continue to questions <ArrowRight size={15} />
+                </button>
+              </div>
+            </section>
+
+            <aside className={`flex flex-col justify-between rounded-2xl border p-5 sm:p-6 ${darkMode ? "bg-[#1e293b] border-[#334155]" : "bg-[#f1f5f9] border-[#e2e8f0]"}`}>
+              <div>
+                <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${darkMode ? "bg-[#312e81] text-[#a5b4fc]" : "bg-white text-[#4f46e5]"}`}>
+                  <Award size={18} />
+                </div>
+                <p className={`text-[9px] font-bold uppercase tracking-[0.2em] ${darkMode ? "text-[#a5b4fc]" : "text-[#6366f1]"}`}>A note for teachers</p>
+                <h3 className="mt-2 text-base font-bold leading-snug tracking-tight">A clear brief makes a better assessment.</h3>
+                <p className={`mt-2 text-xs leading-6 ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>A few thoughtful details help students understand what they are about to work on.</p>
+                <div className={`mt-6 space-y-4 border-t pt-5 ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
                   {[
-                    { val: "30", label: "30 Mins" },
-                    { val: "60", label: "1 Hour" },
-                    { val: "90", label: "1.5 Hours" },
-                    { val: "120", label: "2 Hours" },
-                    { val: "150", label: "2.5 Hours" },
-                    { val: "180", label: "3 Hours" }
-                  ].map((item) => (
-                    <div
-                      key={item.val}
-                      onClick={() => { setDuration(item.val); setOpenDropdown(null); }}
-                      className={`p-3 text-sm font-medium cursor-pointer transition-colors ${
-                        darkMode ? "hover:bg-slate-800" : "hover:bg-slate-100"
-                      } ${duration === item.val ? (darkMode ? "bg-slate-800 text-indigo-400 font-bold" : "bg-slate-100 text-indigo-600 font-bold") : ""}`}
-                    >
-                      {item.label}
+                    "Use a title students can recognise.",
+                    "Choose a duration that suits the task.",
+                    "Add any instructions students should know."
+                  ].map((tip, index) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${darkMode ? "bg-[#312e81] text-[#a5b4fc]" : "bg-white text-[#4f46e5]"}`}>0{index + 1}</span>
+                      <p className={`pt-0.5 text-xs leading-5 ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>{tip}</p>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+              <div className={`mt-6 flex items-center gap-2 border-t pt-4 text-[10px] font-semibold ${darkMode ? "border-[#334155] text-[#94a3b8]" : "border-[#e2e8f0] text-[#64748b]"}`}>
+                <CheckCircle size={13} /> Thoughtful teaching, well presented.
+              </div>
+            </aside>
           </div>
+        )}
 
-          <div>
-            <label className={`block text-xs font-bold uppercase tracking-wider mb-2 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Briefly describe what this quiz tests..."
-              className={`w-full max-w-full box-border p-3 text-sm border rounded-xl outline-none transition-all shadow-sm ${
-                darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"
-              }`}
-              rows={4}
-            />
-          </div>
-
-          <div className="pt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={handleNextToQuestions}
-              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-3 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
-            >
-              Next: Add Questions <ArrowRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 2: Add Questions & Review */}
-      {step === 2 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-          {/* Left Column: Form Inputs */}
-          <div className={`lg:col-span-7 p-3 sm:p-6 rounded-2xl border shadow-sm backdrop-blur-md space-y-6 overflow-hidden box-border ${
-            darkMode ? "bg-slate-800/40 border-slate-700" : "bg-slate-50 border-slate-200"
-          }`}>
-            <div className={`flex justify-between items-center pb-3 border-b ${darkMode ? "border-slate-700" : "border-slate-200"}`}>
-              <h2 className={`font-bold text-sm sm:text-base ${darkMode ? "text-slate-200" : "text-slate-800"}`}>
-                Step 2: Add Questions
-              </h2>
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1.5 shrink-0"
-              >
-                <ArrowLeft size={14} /> Edit Basic Details
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Question Type */}
-              <div className="relative">
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>Question Type</label>
-                <div
-                  onClick={() => setOpenDropdown(openDropdown === "questionType" ? null : "questionType")}
-                  className={`w-full p-2.5 sm:p-3 rounded-xl flex items-center justify-between cursor-pointer font-medium text-xs sm:text-sm select-none ${
-                    darkMode ? "bg-slate-800 border border-slate-600 text-white" : "bg-white border border-slate-300 text-slate-900"
-                  }`}
-                >
-                  <span className="truncate">{typeLabels[currentType]}</span>
-                  <ChevronDown size={14} className={`transition-transform duration-200 shrink-0 ${openDropdown === "questionType" ? "rotate-180" : ""}`} />
+        {/* STEP 2: Question Builder */}
+        {step === 2 && (
+          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] 2xl:gap-6">
+            {/* Question Editor */}
+            <section className={`min-w-0 rounded-2xl border p-4 shadow-sm sm:p-6 lg:p-7 ${darkMode ? "bg-[#0f172a] border-[#334155]" : "bg-white border-[#e2e8f0]"}`}>
+              <div className={`mb-4 flex flex-col justify-between gap-3 border-b pb-5 sm:flex-row sm:items-center ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+                <div>
+                  <p className={`mb-1 text-[9px] font-bold uppercase tracking-[0.2em] ${darkMode ? "text-[#a5b4fc]" : "text-[#6366f1]"}`}>Question studio</p>
+                  <h2 className="text-base font-bold tracking-tight sm:text-lg">Build your question</h2>
+                  <p className={`mt-1 text-[11px] leading-5 ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Choose a format, write the question and set its marks.</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className={`inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-2 text-[10px] font-bold transition ${darkMode ? "text-[#a5b4fc] hover:bg-[#334155]" : "text-[#4f46e5] hover:bg-[#eef2ff]"}`}
+                >
+                  <ArrowLeft size={13} /> Edit quiz details
+                </button>
+              </div>
 
-                {openDropdown === "questionType" && (
-                  <div className={`absolute left-0 right-0 top-full mt-1.5 rounded-xl shadow-xl z-30 border overflow-hidden ${
-                    darkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-700"
-                  }`}>
-                    {questionTypeOrder.map((typeKey) => (
-                      <div
-                        key={typeKey}
-                        onClick={() => { handleTypeChange(typeKey); setOpenDropdown(null); }}
-                        className={`p-2.5 sm:p-3 text-xs sm:text-sm font-medium cursor-pointer transition-colors ${
-                          darkMode ? "hover:bg-slate-800" : "hover:bg-slate-100"
-                        } ${currentType === typeKey ? (darkMode ? "bg-slate-800 text-indigo-400 font-bold" : "bg-slate-100 text-indigo-600 font-bold") : ""}`}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_110px]">
+                <div className="relative min-w-0">
+                  <label className={`mb-2 block text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>Question type</label>
+                  <button
+                    type="button"
+                    onClick={() => setOpenDropdown(openDropdown === "questionType" ? null : "questionType")}
+                    className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left text-xs font-semibold transition focus:border-[#6366f1] ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                  >
+                    <span className="truncate">{typeLabels[currentType]}</span>
+                    <ChevronDown size={15} className={`shrink-0 text-[#64748b] transition-transform ${openDropdown === "questionType" ? "rotate-180" : ""}`} />
+                  </button>
+                  {openDropdown === "questionType" && (
+                    <div className={`absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border p-1.5 shadow-xl ${darkMode ? "bg-[#1e293b] border-[#475569]" : "bg-white border-[#e2e8f0]"}`}>
+                      {questionTypeOrder.map((typeKey) => (
+                        <button
+                          type="button"
+                          key={typeKey}
+                          onClick={() => { handleTypeChange(typeKey); setOpenDropdown(null); }}
+                          className={`w-full rounded-lg px-3 py-2.5 text-left text-xs font-semibold transition ${currentType === typeKey ? darkMode ? "bg-[#312e81] text-[#c7d2fe]" : "bg-[#eef2ff] text-[#4338ca]" : darkMode ? "text-[#cbd5e1] hover:bg-[#334155]" : "text-[#475569] hover:bg-[#f1f5f9]"}`}
+                        >
+                          {typeLabels[typeKey]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <label className={`mb-2 block text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>Marks</label>
+                  <input
+                    type="number"
+                    value={currentMarks}
+                    onChange={(e) => setCurrentMarks(Number(e.target.value))}
+                    disabled={currentType === "essay" && hasSubQuestions}
+                    className={`w-full rounded-xl border px-3.5 py-3 text-xs font-semibold outline-none transition focus:border-[#6366f1] focus:ring-4 focus:ring-[#818cf8]/15 disabled:cursor-not-allowed disabled:opacity-50 ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                    min={1}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className={`mb-2 block text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>
+                  {currentType === "essay" ? "Essay question / main passage / instructions" : "Question text"}
+                </label>
+                <textarea
+                  value={currentText}
+                  onChange={(e) => setCurrentText(e.target.value)}
+                  placeholder={currentType === "essay" ? "Enter the paragraph, essay question or instructions..." : "Write your question clearly..."}
+                  className={`w-full resize-y rounded-xl border px-3 py-2.5 text-xs leading-5 outline-none transition placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-4 focus:ring-[#818cf8]/15 sm:text-sm ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                  rows={currentType === "essay" ? 4 : 3}
+                />
+              </div>
+
+              {/* Image Upload */}
+              <div className="mt-4">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>
+                    <ImageIcon size={14} className={darkMode ? "text-[#818cf8]" : "text-[#6366f1]"} /> Question image
+                  </label>
+                  <span className={`text-[9px] font-medium ${darkMode ? "text-[#94a3b8]" : "text-[#94a3b8]"}`}>Optional</span>
+                </div>
+                <div className={`rounded-2xl border border-dashed p-3 ${darkMode ? "border-[#475569] bg-[#1e293b]" : "border-[#cbd5e1] bg-[#f8fafc]"}`}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${darkMode ? "bg-[#312e81] text-[#a5b4fc]" : "bg-[#eef2ff] text-[#4f46e5]"}`}>
+                      <Upload size={17} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs font-semibold ${darkMode ? "text-[#e2e8f0]" : "text-[#334155]"}`}>Add an image to support your question</p>
+                      <p className={`mt-1 text-[10px] leading-4 ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Choose a clear image from your device.</p>
+                    </div>
+                    <input
+                      type="file"
+                      ref={imageInputRef}
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const file = e.target.files[0];
+                          setCurrentImageFile(file);
+                          setCurrentRemoveImage(false);
+                          setImagePreviewUrl(URL.createObjectURL(file));
+                        }
+                      }}
+                      className={`w-full min-w-0 text-[10px] file:mr-2 file:cursor-pointer file:rounded-lg file:border-0 file:px-3 file:py-2 file:text-[10px] file:font-bold sm:max-w-[220px] ${darkMode ? "text-[#cbd5e1] file:bg-[#312e81] file:text-[#c7d2fe]" : "text-[#64748b] file:bg-[#eef2ff] file:text-[#4338ca]"}`}
+                    />
+                    {(currentImageFile || currentExistingImageUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentImageFile(null);
+                          setImagePreviewUrl(null);
+                          setCurrentExistingImageUrl(null);
+                          setCurrentExistingImagePublicId(null);
+                          setCurrentRemoveImage(true);
+                          if (imageInputRef.current) imageInputRef.current.value = "";
+                        }}
+                        className={`shrink-0 self-end rounded-lg p-2 transition sm:self-auto ${darkMode ? "bg-[#3a2927] text-[#e5a29b] hover:bg-[#4b302d]" : "bg-[#f9ecea] text-[#bd5c54] hover:bg-[#f5dfdc]"}`}
+                        title="Remove image"
+                        aria-label="Remove image"
                       >
-                        {typeLabels[typeKey]}
-                      </div>
-                    ))}
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {(imagePreviewUrl || currentExistingImageUrl) && !currentRemoveImage && (
+                  <div className={`mt-3 inline-flex max-w-full items-center gap-3 rounded-xl border p-2.5 ${darkMode ? "border-[#475569] bg-[#1e293b]" : "border-[#e2e8f0] bg-[#f8fafc]"}`}>
+                    <img
+                      src={imagePreviewUrl || currentExistingImageUrl || ""}
+                      alt="Question image preview"
+                      className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className={`text-[10px] font-bold ${darkMode ? "text-[#e2e8f0]" : "text-[#475569]"}`}>Image ready</p>
+                      <p className={`mt-1 max-w-[220px] truncate text-[10px] ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>{currentImageFile?.name || "Existing question image"}</p>
+                    </div>
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>Marks</label>
-                <input
-                  type="number"
-                  value={currentMarks}
-                  onChange={(e) => setCurrentMarks(Number(e.target.value))}
-                  disabled={currentType === "essay" && hasSubQuestions}
-                  className={`w-full max-w-full box-border p-2.5 text-xs sm:text-sm border rounded-xl outline-none disabled:opacity-50 shadow-sm ${
-                    darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"
-                  }`}
-                  min={1}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
-                {currentType === "essay" ? "Essay Question / Main Passage / Instructions" : "Question Text"}
-              </label>
-              <textarea
-                value={currentText}
-                onChange={(e) => setCurrentText(e.target.value)}
-                placeholder={currentType === "essay" ? "Enter paragraph, essay question or instructions..." : "Type your question here clearly..."}
-                className={`w-full max-w-full box-border p-3 text-xs sm:text-sm border rounded-xl outline-none shadow-sm ${
-                  darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"
-                }`}
-                rows={currentType === "essay" ? 3 : 2}
-              />
-            </div>
-
-            {/* Image Upload with Preview */}
-            <div className="space-y-2">
-              <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
-                <ImageIcon size={14} className="text-indigo-500 shrink-0" /> Upload Question / Passage Image (Optional)
-              </label>
-              <div className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 rounded-xl border border-dashed overflow-hidden ${
-                darkMode ? "border-slate-600 bg-slate-800/60" : "border-slate-300 bg-white"
-              }`}>
-                <input
-                  type="file"
-                  ref={imageInputRef}
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      const file = e.target.files[0];
-                      setCurrentImageFile(file);
-                      setCurrentRemoveImage(false);
-                      setImagePreviewUrl(URL.createObjectURL(file));
-                    }
-                  }}
-                  className={`w-full text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold cursor-pointer ${
-                    darkMode ? "text-slate-400 file:bg-indigo-950 file:text-indigo-300" : "text-slate-500 file:bg-indigo-50 file:text-indigo-700"
-                  }`}
-                />
-                {(currentImageFile || currentExistingImageUrl) && (
+              {/* Multiple Choice Options */}
+              {currentType === "mcq" && (
+                <div className={`mt-6 rounded-2xl border p-4 sm:p-5 ${darkMode ? "bg-[#1e293b] border-[#334155]" : "bg-[#f8fafc] border-[#e2e8f0]"}`}>
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <h3 className="text-xs font-bold">Answer options</h3>
+                      <p className={`mt-1 text-[10px] ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Tick every option that is correct.</p>
+                    </div>
+                    <span className={`rounded-lg px-2.5 py-1 text-[9px] font-bold ${darkMode ? "bg-[#312e81] text-[#c7d2fe]" : "bg-[#eef2ff] text-[#4338ca]"}`}>Multiple answers</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {currentOptions.map((opt, idx) => (
+                      <div key={idx} className="flex min-w-0 items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={currentCorrectMultiple.includes(opt) && opt.trim() !== ""}
+                          onChange={() => handleToggleMultipleCorrect(opt)}
+                          aria-label={`Mark option ${idx + 1} as correct`}
+                          className="h-4 w-4 shrink-0 cursor-pointer accent-[#6366f1]"
+                        />
+                        <span className={`w-5 shrink-0 text-[10px] font-bold ${darkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>{String.fromCharCode(65 + idx)}</span>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => handleOptionChange(idx, e.target.value)}
+                          placeholder={`Write option ${idx + 1}`}
+                          className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-xs outline-none transition placeholder:text-[#94a3b8] focus:border-[#6366f1] ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-white border-[#e2e8f0] text-[#0f172a]"}`}
+                        />
+                        {currentOptions.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOption(idx)}
+                            className={`shrink-0 rounded-lg p-2 transition ${darkMode ? "text-[#64748b] hover:bg-[#3a2927] hover:text-[#e5a29b]" : "text-[#94a3b8] hover:bg-[#f9ecea] hover:text-[#bd5c54]"}`}
+                            aria-label={`Remove option ${idx + 1}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      setCurrentImageFile(null);
-                      setImagePreviewUrl(null);
-                      setCurrentExistingImageUrl(null);
-                      setCurrentExistingImagePublicId(null);
-                      setCurrentRemoveImage(true);
-                      if (imageInputRef.current) imageInputRef.current.value = "";
-                    }}
-                    className={`p-2 rounded-xl transition shrink-0 self-end sm:self-auto ${darkMode ? "text-slate-400 hover:text-red-400 bg-slate-700" : "text-slate-400 hover:text-red-500 bg-slate-100"}`}
-                    title="Remove Image"
+                    onClick={handleAddOption}
+                    className={`mt-4 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${darkMode ? "text-[#a5b4fc] hover:bg-[#334155]" : "text-[#4f46e5] hover:bg-[#eef2ff]"}`}
                   >
-                    <X size={16} />
+                    <Plus size={14} /> Add another option
                   </button>
-                )}
-              </div>
-              {(imagePreviewUrl || currentExistingImageUrl) && !currentRemoveImage && (
-                <div className="mt-3 relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-indigo-500/30 shadow-md">
-                  <img
-                    src={imagePreviewUrl || currentExistingImageUrl || ""}
-                    alt="Question image preview"
-                    className="w-full h-full object-cover"
+                </div>
+              )}
+
+              {/* Single Choice Options */}
+              {currentType === "single" && (
+                <div className={`mt-6 rounded-2xl border p-4 sm:p-5 ${darkMode ? "bg-[#1e293b] border-[#334155]" : "bg-[#f8fafc] border-[#e2e8f0]"}`}>
+                  <div className="mb-4">
+                    <h3 className="text-xs font-bold">Answer options</h3>
+                    <p className={`mt-1 text-[10px] ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Select one correct answer.</p>
+                  </div>
+                  <div className="space-y-2.5">
+                    {currentOptions.map((opt, idx) => (
+                      <div key={idx} className="flex min-w-0 items-center gap-2.5">
+                        <input
+                          type="radio"
+                          name="singleCorrectRadio"
+                          checked={currentCorrect === opt && opt.trim() !== ""}
+                          onChange={() => setCurrentCorrect(opt)}
+                          aria-label={`Select option ${idx + 1} as correct`}
+                          className="h-4 w-4 shrink-0 cursor-pointer accent-[#6366f1]"
+                        />
+                        <span className={`w-5 shrink-0 text-[10px] font-bold ${darkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>{String.fromCharCode(65 + idx)}</span>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => handleOptionChange(idx, e.target.value)}
+                          placeholder={`Write option ${idx + 1}`}
+                          className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-xs outline-none transition placeholder:text-[#94a3b8] focus:border-[#6366f1] ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-white border-[#e2e8f0] text-[#0f172a]"}`}
+                        />
+                        {currentOptions.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOption(idx)}
+                            className={`shrink-0 rounded-lg p-2 transition ${darkMode ? "text-[#64748b] hover:bg-[#3a2927] hover:text-[#e5a29b]" : "text-[#94a3b8] hover:bg-[#f9ecea] hover:text-[#bd5c54]"}`}
+                            aria-label={`Remove option ${idx + 1}`}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddOption}
+                    className={`mt-4 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${darkMode ? "text-[#a5b4fc] hover:bg-[#334155]" : "text-[#4f46e5] hover:bg-[#eef2ff]"}`}
+                  >
+                    <Plus size={14} /> Add another option
+                  </button>
+                </div>
+              )}
+
+              {/* Essay Sub-questions */}
+              {currentType === "essay" && (
+                <div className={`mt-6 rounded-2xl border p-4 sm:p-5 ${darkMode ? "bg-[#1e293b] border-[#334155]" : "bg-[#f8fafc] border-[#e2e8f0]"}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <label className="flex cursor-pointer items-center gap-2.5 text-xs font-bold">
+                      <input
+                        type="checkbox"
+                        checked={hasSubQuestions}
+                        onChange={(e) => setHasSubQuestions(e.target.checked)}
+                        className="h-4 w-4 shrink-0 cursor-pointer accent-[#6366f1]"
+                      />
+                      Add structured sub-questions
+                    </label>
+                    <span className={`rounded-lg px-2.5 py-1 text-[9px] font-semibold ${darkMode ? "bg-[#334155] text-[#cbd5e1]" : "bg-[#f1f5f9] text-[#64748b]"}`}>Optional parts</span>
+                  </div>
+                  {hasSubQuestions && (
+                    <div className={`mt-4 space-y-3 border-t pt-4 ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+                      {currentSubQuestions.map((sq, sIdx) => (
+                        <div key={sq.id} className={`rounded-xl border p-3.5 ${darkMode ? "bg-[#111827] border-[#334155]" : "bg-white border-[#e2e8f0]"}`}>
+                          <div className="mb-2.5 flex items-center justify-between gap-3">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>Part {sIdx + 1}</span>
+                            <div className="flex items-center gap-2">
+                              <label className={`text-[9px] font-semibold ${darkMode ? "text-[#94a3b8]" : "text-[#94a3b8]"}`}>Marks</label>
+                              <input
+                                type="number"
+                                value={sq.marks}
+                                onChange={(e) => handleSubQuestionChange(sIdx, "marks", Number(e.target.value))}
+                                className={`w-16 rounded-lg border px-2 py-1.5 text-center text-[11px] font-bold outline-none focus:border-[#6366f1] ${darkMode ? "bg-[#1e293b] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                                min={1}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSubQuestion(sq.id)}
+                                className={`rounded-lg p-1.5 transition ${darkMode ? "text-[#94a3b8] hover:bg-[#3a2927] hover:text-[#e5a29b]" : "text-[#94a3b8] hover:bg-[#f9ecea] hover:text-[#bd5c54]"}`}
+                                aria-label={`Remove part ${sIdx + 1}`}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={sq.subQuestionText}
+                            onChange={(e) => handleSubQuestionChange(sIdx, "subQuestionText", e.target.value)}
+                            placeholder={`Enter sub-question ${sIdx + 1} (e.g. Explain the process)`}
+                            className={`w-full rounded-lg border px-3 py-2.5 text-xs outline-none transition placeholder:text-[#94a3b8] focus:border-[#6366f1] ${darkMode ? "bg-[#1e293b] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
+                          />
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={handleAddSubQuestion}
+                        className={`inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-[10px] font-bold transition ${darkMode ? "text-[#a5b4fc] hover:bg-[#334155]" : "text-[#4f46e5] hover:bg-[#eef2ff]"}`}
+                      >
+                        <Plus size={14} /> Add another part
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Short Answer Reference */}
+              {currentType === "short" && (
+                <div className="mt-6">
+                  <label className={`mb-2 block text-[10px] font-bold uppercase tracking-[0.13em] ${darkMode ? "text-[#cbd5e1]" : "text-[#475569]"}`}>
+                    Correct answer reference <span className={`font-medium normal-case tracking-normal ${darkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>(optional · for teacher use)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={currentCorrect as string}
+                    onChange={(e) => setCurrentCorrect(e.target.value)}
+                    placeholder="Add a suggested answer for marking..."
+                    className={`w-full rounded-xl border px-4 py-3 text-xs outline-none transition placeholder:text-[#94a3b8] focus:border-[#6366f1] focus:ring-4 focus:ring-[#818cf8]/15 ${darkMode ? "bg-[#0f172a] border-[#475569] text-[#f1f5f9]" : "bg-[#f8fafc] border-[#e2e8f0] text-[#0f172a]"}`}
                   />
                 </div>
               )}
-            </div>
 
-            {/* MCQ Options */}
-            {currentType === "mcq" && (
-              <div className={`p-3 sm:p-4 rounded-2xl border shadow-sm space-y-3 overflow-hidden box-border ${darkMode ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}>
-                <div className="flex justify-between items-center flex-wrap gap-2">
-                  <label className={`block text-xs font-bold uppercase tracking-wider ${darkMode ? "text-slate-300" : "text-slate-700"}`}>Answer Options (Check all correct answers)</label>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg ${darkMode ? "bg-indigo-950/60 text-indigo-400" : "bg-indigo-50 text-indigo-600"}`}>Multiple selections allowed</span>
-                </div>
-                {currentOptions.map((opt, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <input
-                      type="checkbox"
-                      checked={currentCorrectMultiple.includes(opt) && opt.trim() !== ""}
-                      onChange={() => handleToggleMultipleCorrect(opt)}
-                      className={`w-4 h-4 text-indigo-600 rounded cursor-pointer shrink-0 ${darkMode ? "border-slate-600 bg-slate-800" : "border-slate-300"}`}
-                    />
-                    <span className="text-xs font-bold text-slate-400 w-4 shrink-0">{idx + 1}.</span>
-                    <input
-                      type="text"
-                      value={opt}
-                      onChange={(e) => handleOptionChange(idx, e.target.value)}
-                      placeholder={`Option ${idx + 1}`}
-                      className={`w-full max-w-full box-border p-2 sm:p-2.5 text-xs sm:text-sm border rounded-xl shadow-sm ${darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"}`}
-                    />
-                    {currentOptions.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveOption(idx)}
-                        className="text-slate-400 hover:text-red-500 p-1.5 sm:p-2 rounded-xl transition shrink-0"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleAddOption}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 mt-2 hover:underline p-1"
-                >
-                  <Plus size={16} /> Add another option
-                </button>
-              </div>
-            )}
-
-            {/* Single Choice Options */}
-            {currentType === "single" && (
-              <div className={`p-3 sm:p-4 rounded-2xl border shadow-sm space-y-3 overflow-hidden box-border ${darkMode ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}>
-                <div className="flex justify-between items-center">
-                  <label className={`block text-xs font-bold uppercase tracking-wider ${darkMode ? "text-slate-300" : "text-slate-700"}`}>Answer Options (Select 1 correct answer)</label>
-                </div>
-                {currentOptions.map((opt, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <input
-                      type="radio"
-                      name="singleCorrectRadio"
-                      checked={currentCorrect === opt && opt.trim() !== ""}
-                      onChange={() => setCurrentCorrect(opt)}
-                      className={`w-4 h-4 text-indigo-600 cursor-pointer shrink-0 ${darkMode ? "border-slate-600 bg-slate-800" : "border-slate-300"}`}
-                    />
-                    <span className="text-xs font-bold text-slate-400 w-4 shrink-0">{idx + 1}.</span>
-                    <input
-                      type="text"
-                      value={opt}
-                      onChange={(e) => handleOptionChange(idx, e.target.value)}
-                      placeholder={`Option ${idx + 1}`}
-                      className={`w-full max-w-full box-border p-2 sm:p-2.5 text-xs sm:text-sm border rounded-xl shadow-sm ${darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"}`}
-                    />
-                    {currentOptions.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveOption(idx)}
-                        className="text-slate-400 hover:text-red-500 p-1.5 sm:p-2 rounded-xl transition shrink-0"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleAddOption}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 mt-2 hover:underline p-1"
-                >
-                  <Plus size={16} /> Add another option
-                </button>
-              </div>
-            )}
-
-            {/* Essay Sub-questions Toggle & Builder */}
-            {currentType === "essay" && (
-              <div className={`p-3 sm:p-4 rounded-2xl border shadow-sm space-y-4 overflow-hidden box-border ${darkMode ? "bg-slate-900 border-slate-700" : "bg-white border-slate-200"}`}>
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <label className={`text-xs font-bold flex items-center gap-2 cursor-pointer ${darkMode ? "text-slate-300" : "text-slate-700"}`}>
-                    <input 
-                      type="checkbox"
-                      checked={hasSubQuestions}
-                      onChange={(e) => setHasSubQuestions(e.target.checked)}
-                      className={`w-4 h-4 text-indigo-600 rounded shrink-0 ${darkMode ? "border-slate-600 bg-slate-800" : "border-slate-300"}`}
-                    />
-                    Add Sub-Questions (Optional parts like i, ii, iii)
-                  </label>
-                  <span className="text-[10px] font-semibold text-slate-400">Optional</span>
-                </div>
-
-                {hasSubQuestions && (
-                  <div className={`space-y-3 pt-3 border-t ${darkMode ? "border-slate-700" : "border-slate-200"}`}>
-                    {currentSubQuestions.map((sq, sIdx) => (
-                      <div key={sq.id} className={`p-3 rounded-xl border space-y-2 ${darkMode ? "bg-slate-800 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
-                        <div className="flex justify-between items-center gap-2">
-                          <span className={`text-xs font-bold ${darkMode ? "text-slate-300" : "text-slate-700"}`}>Part {sIdx + 1}</span>
-                          <div className="flex items-center gap-2">
-                            <label className="text-[11px] font-semibold text-slate-500">Marks:</label>
-                            <input
-                              type="number"
-                              value={sq.marks}
-                              onChange={(e) => handleSubQuestionChange(sIdx, "marks", Number(e.target.value))}
-                              className={`w-14 p-1 text-xs font-bold border rounded-lg text-center ${darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"}`}
-                              min={1}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveSubQuestion(sq.id)}
-                              className="text-slate-400 hover:text-red-500 p-1 rounded-lg transition shrink-0"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                        <input
-                          type="text"
-                          value={sq.subQuestionText}
-                          onChange={(e) => handleSubQuestionChange(sIdx, "subQuestionText", e.target.value)}
-                          placeholder={`Enter sub-question ${sIdx + 1} (e.g., Explain process)`}
-                          className={`w-full max-w-full box-border p-2 sm:p-2.5 text-xs sm:text-sm border rounded-xl shadow-sm ${darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"}`}
-                        />
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={handleAddSubQuestion}
-                      className="text-xs text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1.5 mt-2 hover:underline p-1"
-                    >
-                      <Plus size={16} /> Add sub-question part
-                    </button>
-                  </div>
+              <div className={`mt-4 flex flex-col-reverse gap-2.5 border-t pt-5 sm:flex-row ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+                {editingQuestionId && (
+                  <button
+                    type="button"
+                    onClick={resetQuestionEditor}
+                    className={`rounded-xl border px-4 py-3 text-xs font-bold transition sm:flex-1 ${darkMode ? "border-[#475569] text-[#cbd5e1] hover:bg-[#334155]" : "border-[#e2e8f0] text-[#475569] hover:bg-[#f1f5f9]"}`}
+                  >
+                    Cancel editing
+                  </button>
                 )}
-              </div>
-            )}
-
-            {currentType === "short" && (
-              <div>
-                <label className={`block text-xs font-bold uppercase tracking-wider mb-1.5 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
-                  Correct Answer Reference <span className="text-slate-400 font-normal lowercase">(optional - teacher can grade manually without this)</span>
-                </label>
-                <input
-                  type="text"
-                  value={currentCorrect as string}
-                  onChange={(e) => setCurrentCorrect(e.target.value)}
-                  placeholder="Provide standard correct answer reference (optional)"
-                  className={`w-full max-w-full box-border p-3 text-xs sm:text-sm border rounded-xl shadow-sm outline-none ${darkMode ? "bg-slate-800 border-slate-600 text-white" : "bg-white border-slate-300 text-slate-900"}`}
-                />
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row gap-2">
-              {editingQuestionId && (
                 <button
                   type="button"
-                  onClick={resetQuestionEditor}
-                  className={`sm:flex-1 py-3.5 rounded-xl font-bold transition-all text-sm border ${darkMode ? "border-slate-600 text-slate-300 hover:bg-slate-700" : "border-slate-300 text-slate-600 hover:bg-slate-100"}`}
+                  onClick={handleAddQuestionToQuiz}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4f46e5] px-5 py-3.5 text-xs font-bold text-white shadow-[0_8px_20px_rgba(79,70,229,0.16)] transition hover:-translate-y-0.5 hover:bg-[#4338ca] focus:outline-none focus:ring-4 focus:ring-[#818cf8]/25 sm:flex-[1.5]"
                 >
-                  Cancel Question Edit
+                  {editingQuestionId ? <Edit3 size={15} /> : <Plus size={16} />}
+                  {editingQuestionId ? "Save question changes" : "Add question to quiz"}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={handleAddQuestionToQuiz}
-                className="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
-              >
-                {editingQuestionId ? <Edit3 size={17} /> : <Plus size={18} />}
-                {editingQuestionId ? "Update This Question" : "Add This Question to Quiz"}
-              </button>
-            </div>
-          </div>
+              </div>
+            </section>
 
-          {/* Right Column: Added Questions List */}
-          <div className={`lg:col-span-5 p-3 sm:p-6 rounded-2xl border shadow-sm flex flex-col justify-between backdrop-blur-md overflow-hidden box-border ${
-            darkMode ? "bg-slate-800/40 border-slate-700" : "bg-slate-50 border-slate-200"
-          }`}>
-            <div>
-              <div className={`flex justify-between items-center mb-4 pb-3 border-b ${darkMode ? "border-slate-700" : "border-slate-200"}`}>
-                <h3 className={`font-bold text-sm ${darkMode ? "text-slate-200" : "text-slate-800"}`}>Added Questions List</h3>
-                <span className={`text-xs px-3 py-1 rounded-xl font-extrabold shadow-inner ${darkMode ? "bg-indigo-950/60 text-indigo-400" : "bg-indigo-50 text-indigo-600"}`}>
-                  {questions.length} Questions
-                </span>
+            {/* Added Questions Panel */}
+            <aside className={`min-w-0 overflow-hidden rounded-2xl border shadow-sm xl:sticky xl:top-5 ${darkMode ? "bg-[#0f172a] border-[#334155]" : "bg-white border-[#e2e8f0]"}`}>
+              <div className={`border-b px-5 py-5 sm:px-6 ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className={`mb-1 text-[9px] font-bold uppercase tracking-[0.2em] ${darkMode ? "text-[#a5b4fc]" : "text-[#6366f1]"}`}>Your question paper</p>
+                    <h3 className="text-base font-bold tracking-tight">Added questions</h3>
+                  </div>
+                  <span className={`flex h-9 min-w-9 items-center justify-center rounded-xl px-2 text-xs font-bold tabular-nums ${darkMode ? "bg-[#312e81] text-[#c7d2fe]" : "bg-[#eef2ff] text-[#4338ca]"}`}>
+                    {questions.length}
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className={`rounded-xl px-3 py-2.5 ${darkMode ? "bg-[#1e293b]" : "bg-[#f1f5f9]"}`}>
+                    <p className={`text-[9px] font-semibold uppercase tracking-wider ${darkMode ? "text-[#94a3b8]" : "text-[#94a3b8]"}`}>Questions</p>
+                    <p className="mt-0.5 text-lg font-bold tabular-nums">{questions.length}</p>
+                  </div>
+                  <div className={`rounded-xl px-3 py-2.5 ${darkMode ? "bg-[#1e293b]" : "bg-[#f1f5f9]"}`}>
+                    <p className={`text-[9px] font-semibold uppercase tracking-wider ${darkMode ? "text-[#94a3b8]" : "text-[#94a3b8]"}`}>Total marks</p>
+                    <p className="mt-0.5 text-lg font-bold tabular-nums">{totalQuizMarks}</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-3 overflow-y-auto max-h-[420px] pr-1">
+              <div className="max-h-[560px] space-y-2.5 overflow-y-auto p-3 sm:p-4">
                 {questions.length === 0 ? (
-                  <div className="text-center py-16 sm:py-20 text-slate-400 space-y-3">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${darkMode ? "bg-slate-800 text-slate-400" : "bg-slate-200 text-slate-400"}`}>
-                      <HelpCircle size={24} />
+                  <div className={`flex min-h-[210px] flex-col items-center justify-center rounded-2xl border border-dashed px-5 py-10 text-center ${darkMode ? "border-[#475569] bg-[#1e293b]" : "border-[#e2e8f0] bg-[#f8fafc]"}`}>
+                    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${darkMode ? "bg-[#312e81] text-[#a5b4fc]" : "bg-[#eef2ff] text-[#4f46e5]"}`}>
+                      <FileText size={21} />
                     </div>
-                    <p className="text-xs font-semibold">No questions added yet. Use the form on the left to add questions.</p>
+                    <p className="text-xs font-bold">Your paper is taking shape</p>
+                    <p className={`mt-1.5 max-w-[220px] text-[10px] leading-5 ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>Questions you add will appear here. You can edit or remove them at any time.</p>
                   </div>
                 ) : (
                   questions.map((q, index) => {
@@ -1022,112 +1132,121 @@ export default function TeacherQuizCreator({ initialQuiz, onCancel, onSaved }: T
                     }
 
                     return (
-                      <div key={q.id} className={`p-3 sm:p-4 border rounded-2xl flex justify-between items-start shadow-sm text-xs gap-3 transition-all ${
-                        darkMode ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-900"
-                      }`}>
-                        <div className="space-y-2 w-full overflow-hidden">
-                          <div className="flex items-center justify-between">
-                            <span className={`text-[10px] px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider border ${
-                              darkMode ? "bg-indigo-950/80 text-indigo-400 border-indigo-900/50" : "bg-indigo-50 text-indigo-600 border-indigo-100"
-                            }`}>
-                              {q.type} • {effectiveMarks} Marks
-                            </span>
-                          </div>
-                          <p className={`font-bold text-sm leading-snug break-words ${darkMode ? "text-white" : "text-slate-800"}`}>
-                            {index + 1}. {q.questionText}
-                          </p>
-
-                          {q.imageUrl && (
-                            <span className="text-[11px] text-slate-500 font-semibold flex items-center gap-1 break-words">📷 Image attached: {q.imageUrl}</span>
-                          )}
-
-                          {q.type === "mcq" && q.options && q.options.length > 0 && (
-                            <div className="pl-3 space-y-1 text-xs text-slate-500 dark:text-slate-400 border-l-2 border-indigo-500/40">
-                              {q.options.map((opt, oIdx) => {
-                                const isCorrect = Array.isArray(q.correctAnswer) && q.correctAnswer.includes(opt);
-                                return (
-                                  <div key={oIdx} className={`break-words ${isCorrect ? "text-indigo-600 dark:text-indigo-400 font-bold" : ""}`}>
-                                    • {opt} {isCorrect && " (Correct)"}
-                                  </div>
-                                );
-                              })}
+                      <div
+                        key={q.id}
+                        className={`group rounded-2xl border p-3 transition ${darkMode ? "bg-[#1e293b] border-[#334155] hover:border-[#475569]" : "bg-[#f8fafc] border-[#e2e8f0] hover:border-[#c7d2fe]"}`}
+                      >
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                              <span className={`rounded-md px-2 py-1 text-[8px] font-bold uppercase tracking-wider ${darkMode ? "bg-[#312e81] text-[#c7d2fe]" : "bg-[#eef2ff] text-[#4338ca]"}`}>
+                                {q.type}
+                              </span>
+                              <span className={`text-[9px] font-semibold ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>{effectiveMarks} marks</span>
+                              <span className={`ml-auto text-[9px] font-bold ${darkMode ? "text-[#64748b]" : "text-[#94a3b8]"}`}>Q{String(index + 1).padStart(2, "0")}</span>
                             </div>
-                          )}
-
-                          {q.type === "single" && q.options && q.options.length > 0 && (
-                            <div className="pl-3 space-y-1 text-xs text-slate-500 dark:text-slate-400 border-l-2 border-indigo-500/40">
-                              {q.options.map((opt, oIdx) => {
-                                const isCorrect = opt === q.correctAnswer;
-                                return (
-                                  <div key={oIdx} className={`break-words ${isCorrect ? "text-indigo-600 dark:text-indigo-400 font-bold" : ""}`}>
-                                    • {opt} {isCorrect && " (Correct)"}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {q.type === "essay" && q.subQuestions && (
-                            <div className="pl-3 space-y-1.5 text-xs text-slate-500 dark:text-slate-300 border-l-2 border-indigo-500/40">
-                              {q.subQuestions.map((sq, sqIdx) => (
-                                <div key={sq.id} className="font-semibold break-words">
-                                  ({sqIdx + 1}) {sq.subQuestionText} <span className="text-indigo-500 font-bold">[{sq.marks} marks]</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {q.type !== "mcq" && q.type !== "single" && q.type !== "essay" && (
-                            <p className="text-xs text-slate-500 dark:text-slate-300 font-medium pt-1 break-words">
-                              <span className="text-slate-400 font-bold">Answer Ref:</span> {String(q.correctAnswer || "None specified (Manual grading)")}
+                            <p className={`break-words text-xs font-semibold leading-5 ${darkMode ? "text-[#e2e8f0]" : "text-[#334155]"}`}>
+                              {q.questionText}
                             </p>
-                          )}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleEditQuestion(q)}
+                              className={`rounded-lg p-2 transition ${darkMode ? "text-[#a5b4fc] hover:bg-[#312e81] hover:text-[#c7d2fe]" : "text-[#4f46e5] hover:bg-[#eef2ff] hover:text-[#4338ca]"}`}
+                              title="Edit question"
+                              aria-label="Edit question"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveQuestion(q.id)}
+                              className={`rounded-lg p-2 transition ${darkMode ? "text-[#64748b] hover:bg-[#3a2927] hover:text-[#e5a29b]" : "text-[#94a3b8] hover:bg-[#f9ecea] hover:text-[#bd5c54]"}`}
+                              title="Delete question"
+                              aria-label="Delete question"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleEditQuestion(q)}
-                            className="text-indigo-500 hover:text-indigo-600 p-2 rounded-xl transition"
-                            title="Edit Question"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveQuestion(q.id)}
-                            className="text-slate-400 hover:text-red-500 p-2 rounded-xl transition"
-                            title="Delete Question"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                        {q.imageUrl && (
+                          <span className={`mt-2 flex items-start gap-1.5 break-all text-[9px] font-medium ${darkMode ? "text-[#94a3b8]" : "text-[#64748b]"}`}>
+                            <ImageIcon size={11} className="mt-0.5 shrink-0" /> Image attached: {q.imageUrl}
+                          </span>
+                        )}
+
+                        {q.type === "mcq" && q.options && q.options.length > 0 && (
+                          <div className={`mt-3 space-y-1.5 border-l-2 pl-3 ${darkMode ? "border-[#818cf8]" : "border-[#818cf8]"}`}>
+                            {q.options.map((opt, oIdx) => {
+                              const isCorrect = Array.isArray(q.correctAnswer) && q.correctAnswer.includes(opt);
+                              return (
+                                <div key={oIdx} className={`break-words text-[10px] leading-4 ${isCorrect ? darkMode ? "font-bold text-[#c7d2fe]" : "font-bold text-[#4338ca]" : darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>
+                                  <span className="mr-1.5 font-bold opacity-70">{String.fromCharCode(65 + oIdx)}.</span>{opt} {isCorrect && "· Correct"}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {q.type === "single" && q.options && q.options.length > 0 && (
+                          <div className={`mt-3 space-y-1.5 border-l-2 pl-3 ${darkMode ? "border-[#818cf8]" : "border-[#818cf8]"}`}>
+                            {q.options.map((opt, oIdx) => {
+                              const isCorrect = opt === q.correctAnswer;
+                              return (
+                                <div key={oIdx} className={`break-words text-[10px] leading-4 ${isCorrect ? darkMode ? "font-bold text-[#c7d2fe]" : "font-bold text-[#4338ca]" : darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>
+                                  <span className="mr-1.5 font-bold opacity-70">{String.fromCharCode(65 + oIdx)}.</span>{opt} {isCorrect && "· Correct"}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {q.type === "essay" && q.subQuestions && (
+                          <div className={`mt-3 space-y-1.5 border-l-2 pl-3 ${darkMode ? "border-[#818cf8] text-[#cbd5e1]" : "border-[#818cf8] text-[#64748b]"}`}>
+                            {q.subQuestions.map((sq, sqIdx) => (
+                              <div key={sq.id} className="break-words text-[10px] font-medium leading-4">
+                                ({sqIdx + 1}) {sq.subQuestionText} <span className={`font-bold ${darkMode ? "text-[#c7d2fe]" : "text-[#4338ca]"}`}>[{sq.marks} marks]</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {q.type !== "mcq" && q.type !== "single" && q.type !== "essay" && (
+                          <p className={`mt-2 break-words text-[10px] leading-4 ${darkMode ? "text-[#cbd5e1]" : "text-[#64748b]"}`}>
+                            <span className="font-bold">Answer reference:</span> {String(q.correctAnswer || "None specified (Manual grading)")}
+                          </p>
+                        )}
                       </div>
                     );
                   })
                 )}
               </div>
-            </div>
 
-            {isEditMode && (
-              <p className={`mb-3 p-3 rounded-xl border text-[11px] leading-relaxed ${darkMode ? "bg-amber-500/10 border-amber-500/20 text-amber-200" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
-                After updating, this quiz will return to Pending Admin Approval and will be temporarily unpublished. Its previous class and schedule selections will be retained for republishing after approval.
-              </p>
-            )}
-            <div className={`pt-4 border-t ${darkMode ? "border-slate-700" : "border-slate-200"}`}>
-              <button
-                onClick={handlePreSubmitCheck}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2.5 transition-all text-sm shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
-              >
-                <Send size={18} /> {isEditMode ? "Review & Update Quiz" : "Submit Quiz to Admin"}
-              </button>
-            </div>
+              {isEditMode && (
+                <p className={`mx-4 mb-3 rounded-xl border px-3.5 py-3 text-[10px] leading-5 sm:mx-5 ${darkMode ? "border-[#475569] bg-[#1e293b] text-[#cbd5e1]" : "border-[#e2e8f0] bg-[#eef2ff] text-[#64748b]"}`}>
+                  After updating, this quiz will return to Pending Admin Approval and will be temporarily unpublished. Its previous class and schedule selections will be retained for republishing after approval.
+                </p>
+              )}
+
+              <div className={`border-t p-4 sm:p-5 ${darkMode ? "border-[#334155]" : "border-[#e2e8f0]"}`}>
+                <button
+                  type="button"
+                  onClick={handlePreSubmitCheck}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#4f46e5] px-4 py-3 text-xs font-bold text-white shadow-[0_8px_20px_rgba(79,70,229,0.16)] transition hover:-translate-y-0.5 hover:bg-[#4338ca] focus:outline-none focus:ring-4 focus:ring-[#818cf8]/25"
+                >
+                  <Send size={15} /> {isEditMode ? "Review & update quiz" : "Review & submit quiz"}
+                  <ArrowRight size={14} className="ml-1" />
+                </button>
+                <p className={`mt-2.5 text-center text-[9px] leading-4 ${darkMode ? "text-[#94a3b8]" : "text-[#94a3b8]"}`}>You can review the complete paper before sending it.</p>
+              </div>
+            </aside>
           </div>
+        )}
+      </div>
 
-        </div>
-      )}
-
-      <QuizUploadSuccessPopup 
+      <QuizUploadSuccessPopup
         isOpen={showSuccessPopup}
         onClose={() => setShowSuccessPopup(false)}
         message="Your quiz has been successfully submitted to the Admin for review and approval!"
