@@ -8,6 +8,7 @@ import { useTheme } from "@/app/context/ThemeContext";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import QuizUploadSuccessPopup from "@/app/components/QuizUploadSuccessPopup";
+import TeacherQuizCreator from "@/app/components/TeacherQuizCreator";
 
 interface SubQuestion {
   _id?: string;
@@ -16,10 +17,12 @@ interface SubQuestion {
 }
 
 interface Question {
-  id: string;
+  id?: string;
+  _id?: string;
   type: "mcq" | "single" | "short" | "essay";
   questionText: string;
   imageUrl?: string;
+  imagePublicId?: string;
   options: string[];
   correctAnswer: any;
   marks: number;
@@ -54,6 +57,7 @@ export default function TeacherMyQuizzesPage() {
   const router = useRouter();
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingQuiz, setEditingQuiz] = useState<QuizItem | null>(null);
 
   // Submissions count state per quiz
   const [quizSubmissionCounts, setQuizSubmissionCounts] = useState<{ [quizId: string]: { total: number; pending: number; evaluated: number } }>({});
@@ -377,6 +381,23 @@ export default function TeacherMyQuizzesPage() {
   const indexOfFirstQuiz = indexOfLastQuiz - quizzesPerPage;
   const currentQuizzes = quizzes.slice(indexOfFirstQuiz, indexOfLastQuiz);
   const totalPages = Math.ceil(quizzes.length / quizzesPerPage);
+
+  // Reuse the existing quiz creator form for editing so the same question types,
+  // image upload handling and validation rules are used for both create and update.
+  if (editingQuiz) {
+    return (
+      <div className={`min-h-screen p-3 sm:p-6 ${darkMode ? "bg-slate-950" : "bg-slate-50"}`}>
+        <TeacherQuizCreator
+          initialQuiz={editingQuiz}
+          onCancel={() => setEditingQuiz(null)}
+          onSaved={() => {
+            setEditingQuiz(null);
+            fetchMyQuizzes();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`p-4 sm:p-6 lg:p-8 min-h-screen transition-colors duration-300 ${darkMode ? "bg-slate-950 text-white" : "bg-slate-50 text-slate-900"}`}>
@@ -903,12 +924,20 @@ export default function TeacherMyQuizzesPage() {
 
                     {/* Footer Actions */}
                     <div className={`flex flex-col sm:flex-row justify-between items-center pt-4 gap-3 border-t ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
-                      <button
-                        onClick={() => openDeleteModal(quiz._id)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-colors"
-                      >
-                        <Trash2 size={15} /> Delete Quiz
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => setEditingQuiz(quiz)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-500 hover:bg-indigo-500/10 transition-colors"
+                        >
+                          <Edit3 size={15} /> Edit Quiz
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(quiz._id)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-colors"
+                        >
+                          <Trash2 size={15} /> Delete Quiz
+                        </button>
+                      </div>
 
                       <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                         {quiz.status === "approved" && (
