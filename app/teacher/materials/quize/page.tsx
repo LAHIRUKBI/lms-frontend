@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, Send, Image as ImageIcon, CheckCircle, Upload, X, HelpCircle, Award, Clock, FileText, ArrowRight, ArrowLeft, Eye, AlertCircle, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Send, Image as ImageIcon, CheckCircle, Upload, X, HelpCircle, Award, Clock, FileText, ArrowRight, ArrowLeft, Eye, AlertCircle, ChevronDown, Edit3 } from "lucide-react";
 import axios from "axios";
 import QuizUploadSuccessPopup from "@/app/components/QuizUploadSuccessPopup";
 import { useTheme } from "@/app/context/ThemeContext";
@@ -18,23 +18,68 @@ interface SubQuestion {
 
 interface Question {
   id: string;
+  _id?: string;
   type: QuestionType;
   questionText: string;
   imageFile?: File | null;
   imageUrl?: string;
+  imagePublicId?: string;
+  removeImage?: boolean;
   options: string[];
   correctAnswer: string | string[];
   marks: number;
   subQuestions?: SubQuestion[];
 }
 
-export default function TeacherQuizCreator() {
-  const { darkMode } = useTheme();
+interface InitialQuiz {
+  _id: string;
+  title: string;
+  description?: string;
+  duration: number;
+  questions: Array<{
+    _id?: string;
+    type: QuestionType;
+    questionText: string;
+    imageUrl?: string;
+    imagePublicId?: string;
+    options?: string[];
+    correctAnswer?: string | string[];
+    marks?: number;
+    subQuestions?: Array<{ _id?: string; subQuestionText: string; marks: number }>;
+  }>;
+}
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [duration, setDuration] = useState("30");
-  const [questions, setQuestions] = useState<Question[]>([]);
+interface TeacherQuizCreatorProps {
+  initialQuiz?: InitialQuiz | null;
+  onCancel?: () => void;
+  onSaved?: () => void;
+}
+
+export default function TeacherQuizCreator({ initialQuiz, onCancel, onSaved }: TeacherQuizCreatorProps) {
+  const { darkMode } = useTheme();
+  const isEditMode = Boolean(initialQuiz?._id);
+
+  const [title, setTitle] = useState(initialQuiz?.title || "");
+  const [description, setDescription] = useState(initialQuiz?.description || "");
+  const [duration, setDuration] = useState(String(initialQuiz?.duration ?? 30));
+  const [questions, setQuestions] = useState<Question[]>(() =>
+    (initialQuiz?.questions || []).map((q, index) => ({
+      id: String(q._id || `existing-${index}`),
+      _id: q._id,
+      type: q.type,
+      questionText: q.questionText,
+      imageUrl: q.imageUrl || undefined,
+      imagePublicId: q.imagePublicId || undefined,
+      options: Array.isArray(q.options) ? [...q.options] : [],
+      correctAnswer: q.correctAnswer ?? "",
+      marks: Number(q.marks ?? 3),
+      subQuestions: (q.subQuestions || []).map((sq, sqIndex) => ({
+        id: String(sq._id || `existing-${index}-sub-${sqIndex}`),
+        subQuestionText: sq.subQuestionText,
+        marks: Number(sq.marks ?? 5),
+      })),
+    }))
+  );
 
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -43,6 +88,10 @@ export default function TeacherQuizCreator() {
 
   const [currentImageFile, setCurrentImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [currentExistingImageUrl, setCurrentExistingImageUrl] = useState<string | null>(null);
+  const [currentExistingImagePublicId, setCurrentExistingImagePublicId] = useState<string | null>(null);
+  const [currentRemoveImage, setCurrentRemoveImage] = useState(false);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const [currentOptions, setCurrentOptions] = useState<string[]>(["", ""]);
@@ -82,6 +131,9 @@ export default function TeacherQuizCreator() {
   };
 
   const handleTypeChange = (newType: QuestionType) => {
+    // Re-selecting the already selected type must not overwrite a teacher-customized marks value.
+    if (newType === currentType) return;
+
     setCurrentType(newType);
     if (newType === "mcq") {
       setCurrentMarks(3);
@@ -154,6 +206,47 @@ export default function TeacherQuizCreator() {
     setStep(2);
   };
 
+  const resetQuestionEditor = () => {
+    setCurrentText("");
+    setCurrentImageFile(null);
+    setImagePreviewUrl(null);
+    setCurrentExistingImageUrl(null);
+    setCurrentExistingImagePublicId(null);
+    setCurrentRemoveImage(false);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+    setCurrentOptions(["", ""]);
+    setCurrentCorrect("");
+    setCurrentCorrectMultiple([]);
+    setHasSubQuestions(false);
+    setCurrentSubQuestions([{ id: Date.now().toString(), subQuestionText: "", marks: 5 }]);
+    setEditingQuestionId(null);
+    // Intentionally keep currentType and currentMarks unchanged so the next question
+    // starts with the same type and marks until the teacher changes them.
+  };
+
+  const handleEditQuestion = (question: Question) => {
+    setEditingQuestionId(question.id);
+    setCurrentType(question.type);
+    setCurrentText(question.questionText);
+    setCurrentImageFile(null);
+    setImagePreviewUrl(null);
+    setCurrentExistingImageUrl(question.imageUrl || null);
+    setCurrentExistingImagePublicId(question.imagePublicId || null);
+    setCurrentRemoveImage(false);
+    setCurrentOptions(question.options?.length ? [...question.options] : ["", ""]);
+    setCurrentCorrect(Array.isArray(question.correctAnswer) ? "" : String(question.correctAnswer || ""));
+    setCurrentCorrectMultiple(Array.isArray(question.correctAnswer) ? [...question.correctAnswer] : []);
+    setCurrentMarks(Number(question.marks) || 3);
+    setHasSubQuestions(Boolean(question.subQuestions?.length));
+    setCurrentSubQuestions(
+      question.subQuestions?.length
+        ? question.subQuestions.map((sq) => ({ ...sq }))
+        : [{ id: Date.now().toString(), subQuestionText: "", marks: 5 }]
+    );
+    setStep(2);
+    setOpenDropdown(null);
+  };
+
   const handleAddQuestionToQuiz = () => {
     if (!currentText.trim()) {
       triggerNotification("Please enter the question text or main description.");
@@ -197,34 +290,43 @@ export default function TeacherQuizCreator() {
       }
     }
 
-    const newQuestion: Question = {
-      id: Date.now().toString(),
+    const existingQuestion = editingQuestionId
+      ? questions.find((question) => question.id === editingQuestionId)
+      : undefined;
+
+    const updatedQuestion: Question = {
+      id: editingQuestionId || Date.now().toString(),
+      _id: existingQuestion?._id,
       type: currentType,
       questionText: currentText,
       imageFile: currentImageFile,
-      imageUrl: currentImageFile ? currentImageFile.name : undefined,
-      options: (currentType === "mcq" || currentType === "single") ? currentOptions : [],
+      imageUrl: currentImageFile
+        ? currentImageFile.name
+        : (currentRemoveImage ? "" : (currentExistingImageUrl || undefined)),
+      imagePublicId: currentRemoveImage ? "" : (currentExistingImagePublicId || undefined),
+      removeImage: currentRemoveImage,
+      options: (currentType === "mcq" || currentType === "single") ? [...currentOptions] : [],
       correctAnswer: finalCorrectAnswer,
       marks: calculatedMarks,
-      subQuestions: (currentType === "essay" && hasSubQuestions && finalSubQuestions.length > 0) ? finalSubQuestions : undefined,
+      subQuestions: (currentType === "essay" && hasSubQuestions && finalSubQuestions.length > 0)
+        ? finalSubQuestions
+        : undefined,
     };
 
-    setQuestions([...questions, newQuestion]);
+    if (editingQuestionId) {
+      setQuestions((previous) => previous.map((question) =>
+        question.id === editingQuestionId ? updatedQuestion : question
+      ));
+    } else {
+      setQuestions((previous) => [...previous, updatedQuestion]);
+    }
 
-    setCurrentText("");
-    setCurrentImageFile(null);
-    setImagePreviewUrl(null);
-    if (imageInputRef.current) imageInputRef.current.value = "";
-    setCurrentOptions(["", ""]);
-    setCurrentCorrect("");
-    setCurrentCorrectMultiple([]);
-    setHasSubQuestions(false);
-    setCurrentSubQuestions([{ id: Date.now().toString(), subQuestionText: "", marks: 5 }]);
-    setCurrentMarks(3);
+    resetQuestionEditor();
   };
 
   const handleRemoveQuestion = (id: string) => {
-    setQuestions(questions.filter((q) => q.id !== id));
+    if (editingQuestionId === id) resetQuestionEditor();
+    setQuestions((previous) => previous.filter((q) => q.id !== id));
   };
 
   const handlePreSubmitCheck = () => {
@@ -253,12 +355,26 @@ export default function TeacherQuizCreator() {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/quiz/quizzes`, formData, {
-        headers: { 
+      const endpoint = isEditMode
+        ? `${process.env.NEXT_PUBLIC_API_URL}/api/quiz/${initialQuiz!._id}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/api/quiz/quizzes`;
+
+      const requestConfig = {
+        headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`
         },
-      });
+      };
+
+      const response = isEditMode
+        ? await axios.put(endpoint, formData, requestConfig)
+        : await axios.post(endpoint, formData, requestConfig);
+
+      if (isEditMode && response.status === 200) {
+        window.alert(response.data?.message || "Quiz updated successfully and sent for admin approval.");
+        onSaved?.();
+        return;
+      }
 
       if (response.status === 201) {
         setShowSuccessPopup(true);
@@ -266,10 +382,15 @@ export default function TeacherQuizCreator() {
         setDescription("");
         setQuestions([]);
         setStep(1);
+        resetQuestionEditor();
       }
     } catch (error: any) {
-      console.error("Submission error:", error);
-      triggerNotification(error.response?.data?.message || "Failed to connect with the server.");
+      console.error("Quiz submission/update error:", error);
+      triggerNotification(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to connect with the server."
+      );
     }
   };
 
@@ -288,6 +409,9 @@ export default function TeacherQuizCreator() {
     "short": "Short Answer",
     "essay": "Essay / Structured Questions"
   };
+
+  const questionTypeOrder: QuestionType[] = ["single", "mcq", "short", "essay"];
+
 
   return (
     <div 
@@ -326,9 +450,11 @@ export default function TeacherQuizCreator() {
             <div className="flex justify-between items-center pb-4 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <h2 className="text-lg sm:text-xl font-extrabold flex items-center gap-2">
-                  <Eye className="text-indigo-500 shrink-0" size={22} /> Review Quiz Before Submission
+                  <Eye className="text-indigo-500 shrink-0" size={22} /> {isEditMode ? "Review Quiz Before Updating" : "Review Quiz Before Submission"}
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Please inspect your quiz paper carefully before sending it to the admin.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {isEditMode ? "Check the revised quiz carefully before sending the changes for admin approval." : "Please inspect your quiz paper carefully before sending it to the admin."}
+                </p>
               </div>
               <button onClick={() => setShowReviewModal(false)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0">
                 <X size={20} />
@@ -370,7 +496,7 @@ export default function TeacherQuizCreator() {
                 onClick={handleSubmitToAdmin}
                 className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-lg shadow-indigo-600/20 transition flex items-center justify-center gap-2"
               >
-                <Send size={16} /> Confirm & Send to Admin
+                <Send size={16} /> {isEditMode ? "Confirm & Update Quiz" : "Confirm & Send to Admin"}
               </button>
             </div>
           </div>
@@ -388,14 +514,25 @@ export default function TeacherQuizCreator() {
             }`}>
               <FileText size={22} />
             </div>
-            Create New Quiz
+            {isEditMode ? "Edit Quiz" : "Create New Quiz"}
           </h1>
           <p className={`text-xs sm:text-sm mt-1.5 font-medium ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-            Design your quiz questions cleanly and submit them seamlessly for admin approval.
+            {isEditMode
+              ? "Update the quiz details and questions. Your changes will be sent to the admin for approval again."
+              : "Design your quiz questions cleanly and submit them seamlessly for admin approval."}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          {isEditMode && onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border ${darkMode ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"}`}
+            >
+              <ArrowLeft size={14} /> Back to My Quizzes
+            </button>
+          )}
           <div className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl flex items-center gap-2 text-xs font-semibold shadow-sm border ${
             darkMode ? "bg-slate-800/80 border-slate-700/60 text-slate-300" : "bg-slate-50 border-slate-200 text-slate-700"
           }`}>
@@ -574,7 +711,7 @@ export default function TeacherQuizCreator() {
                   <div className={`absolute left-0 right-0 top-full mt-1.5 rounded-xl shadow-xl z-30 border overflow-hidden ${
                     darkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-200 text-slate-700"
                   }`}>
-                    {(["mcq", "single", "short", "essay"] as QuestionType[]).map((typeKey) => (
+                    {questionTypeOrder.map((typeKey) => (
                       <div
                         key={typeKey}
                         onClick={() => { handleTypeChange(typeKey); setOpenDropdown(null); }}
@@ -635,6 +772,7 @@ export default function TeacherQuizCreator() {
                     if (e.target.files && e.target.files[0]) {
                       const file = e.target.files[0];
                       setCurrentImageFile(file);
+                      setCurrentRemoveImage(false);
                       setImagePreviewUrl(URL.createObjectURL(file));
                     }
                   }}
@@ -642,12 +780,15 @@ export default function TeacherQuizCreator() {
                     darkMode ? "text-slate-400 file:bg-indigo-950 file:text-indigo-300" : "text-slate-500 file:bg-indigo-50 file:text-indigo-700"
                   }`}
                 />
-                {currentImageFile && (
+                {(currentImageFile || currentExistingImageUrl) && (
                   <button
                     type="button"
                     onClick={() => {
                       setCurrentImageFile(null);
                       setImagePreviewUrl(null);
+                      setCurrentExistingImageUrl(null);
+                      setCurrentExistingImagePublicId(null);
+                      setCurrentRemoveImage(true);
                       if (imageInputRef.current) imageInputRef.current.value = "";
                     }}
                     className={`p-2 rounded-xl transition shrink-0 self-end sm:self-auto ${darkMode ? "text-slate-400 hover:text-red-400 bg-slate-700" : "text-slate-400 hover:text-red-500 bg-slate-100"}`}
@@ -657,9 +798,13 @@ export default function TeacherQuizCreator() {
                   </button>
                 )}
               </div>
-              {imagePreviewUrl && (
+              {(imagePreviewUrl || currentExistingImageUrl) && !currentRemoveImage && (
                 <div className="mt-3 relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-indigo-500/30 shadow-md">
-                  <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                  <img
+                    src={imagePreviewUrl || currentExistingImageUrl || ""}
+                    alt="Question image preview"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               )}
             </div>
@@ -828,13 +973,25 @@ export default function TeacherQuizCreator() {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={handleAddQuestionToQuiz}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
-            >
-              <Plus size={18} /> Add This Question to Quiz
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {editingQuestionId && (
+                <button
+                  type="button"
+                  onClick={resetQuestionEditor}
+                  className={`sm:flex-1 py-3.5 rounded-xl font-bold transition-all text-sm border ${darkMode ? "border-slate-600 text-slate-300 hover:bg-slate-700" : "border-slate-300 text-slate-600 hover:bg-slate-100"}`}
+                >
+                  Cancel Question Edit
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleAddQuestionToQuiz}
+                className="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
+              >
+                {editingQuestionId ? <Edit3 size={17} /> : <Plus size={18} />}
+                {editingQuestionId ? "Update This Question" : "Add This Question to Quiz"}
+              </button>
+            </div>
           </div>
 
           {/* Right Column: Added Questions List */}
@@ -927,13 +1084,24 @@ export default function TeacherQuizCreator() {
                           )}
                         </div>
 
-                        <button
-                          onClick={() => handleRemoveQuestion(q.id)}
-                          className="text-slate-400 hover:text-red-500 p-2 rounded-xl transition shrink-0"
-                          title="Delete Question"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleEditQuestion(q)}
+                            className="text-indigo-500 hover:text-indigo-600 p-2 rounded-xl transition"
+                            title="Edit Question"
+                          >
+                            <Edit3 size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveQuestion(q.id)}
+                            className="text-slate-400 hover:text-red-500 p-2 rounded-xl transition"
+                            title="Delete Question"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                     );
                   })
@@ -941,12 +1109,17 @@ export default function TeacherQuizCreator() {
               </div>
             </div>
 
+            {isEditMode && (
+              <p className={`mb-3 p-3 rounded-xl border text-[11px] leading-relaxed ${darkMode ? "bg-amber-500/10 border-amber-500/20 text-amber-200" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+                After updating, this quiz will return to Pending Admin Approval and will be temporarily unpublished. Its previous class and schedule selections will be retained for republishing after approval.
+              </p>
+            )}
             <div className={`pt-4 border-t ${darkMode ? "border-slate-700" : "border-slate-200"}`}>
               <button
                 onClick={handlePreSubmitCheck}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-2.5 transition-all text-sm shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
               >
-                <Send size={18} /> Submit Quiz to Admin
+                <Send size={18} /> {isEditMode ? "Review & Update Quiz" : "Submit Quiz to Admin"}
               </button>
             </div>
           </div>
