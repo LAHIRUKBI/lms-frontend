@@ -2,9 +2,10 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { io } from "socket.io-client";
 import { 
   Trash2, 
   Calendar, 
@@ -40,12 +41,29 @@ const getClassCoverImageUrl = (photoUrl?: string) => {
   return `${process.env.NEXT_PUBLIC_API_URL}${photoUrl.startsWith('/') ? '' : '/'}${photoUrl}`;
 };
 
+// The same MongoDB student ID must be used by class requests and Socket.IO.
+// Accept a populated student, a plain ID, or an ObjectId-style wrapper.
+const getPresenceStudentId = (value: any): string => {
+  if (typeof value === "string" || typeof value === "number") return String(value);
+  if (!value || typeof value !== "object") return "";
+  if (value._id != null) return getPresenceStudentId(value._id);
+  if (value.$oid != null) return getPresenceStudentId(value.$oid);
+  if (value.id != null) return getPresenceStudentId(value.id);
+  if (typeof value.toHexString === "function") return value.toHexString();
+  return "";
+};
+
 export default function ViewClassesPage() {
   const router = useRouter();
   const { darkMode } = useTheme();
   const [fetching, setFetching] = useState(true);
   const [classes, setClasses] = useState<any[]>([]);
   const [classRequests, setClassRequests] = useState<any[]>([]);
+  // Presence is scoped to students returned by the existing teacher API.
+  const [onlineStudentStatuses, setOnlineStudentStatuses] = useState<Record<string, boolean>>({});
+  // Live Socket.IO events take precedence over a possibly stale API response.
+  const livePresenceRef = useRef<Record<string, boolean>>({});
+  const knownStudentIdsRef = useRef<Set<string>>(new Set());
   const [message, setMessage] = useState({ type: "", text: "" });
 
   const [deleteClassId, setDeleteClassId] = useState<string | null>(null);
@@ -94,6 +112,107 @@ export default function ViewClassesPage() {
     fetchClassesAndStudents(token);
   }, [router]);
 
+  // Frontend-only presence: use the existing teacher API when it exposes
+  // isOnline, and listen to the global student_online event already emitted
+  // by studentAuthController. No backend change or admin-only endpoint used.
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    let active = true;
+    let missingFieldWarningShown = false;
+    const socket = io(`${process.env.NEXT_PUBLIC_API_URL}`);
+
+    const syncOnlineStatuses = async () => {
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/classes/requests/all`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!active || !Array.isArray(response.data)) return;
+
+        const snapshot: Record<string, boolean> = {};
+        let studentObjects = 0;
+        for (const request of response.data) {
+          const student = request?.studentId;
+          const studentId = getPresenceStudentId(student);
+          if (student && typeof student === "object") studentObjects++;
+          if (studentId && typeof student?.isOnline === "boolean") {
+            snapshot[studentId] = student.isOnline;
+          }
+        }
+
+        if (Object.keys(snapshot).length) {
+          // An API refresh must not erase a more recent real-time event.
+          setOnlineStudentStatuses(prev => ({
+            ...prev,
+            ...snapshot,
+            ...livePresenceRef.current,
+          }));
+        } else if (studentObjects > 0 && !missingFieldWarningShown) {
+          missingFieldWarningShown = true;
+          console.warn(
+            "[TeacherPresence] /api/classes/requests/all does not expose studentId.isOnline. " +
+            "The existing student_online event can update status AFTER the teacher connects, " +
+            "but students already online cannot be identified from this response."
+          );
+        }
+      } catch (err) {
+        if (active) console.warn("[TeacherPresence] Teacher presence refresh failed:", err);
+      }
+    };
+
+    const onStudentOnline = (data: { studentId?: unknown; isOnline?: unknown }) => {
+      const studentId = getPresenceStudentId(data?.studentId);
+      if (!studentId || typeof data?.isOnline !== "boolean") {
+        console.warn("[TeacherPresence] Unexpected student_online payload:", data);
+        return;
+      }
+
+      // The server emits this event to all clients. Only IDs belonging to
+      // the teacher's existing class list will ever be rendered in this page.
+      livePresenceRef.current[studentId] = data.isOnline;
+      setOnlineStudentStatuses(prev => ({ ...prev, [studentId]: data.isOnline as boolean }));
+      console.info("[TeacherPresence] student_online received:", {
+        studentId,
+        isOnline: data.isOnline,
+        matchesLoadedStudent: knownStudentIdsRef.current.has(studentId),
+      });
+    };
+
+    const onConnect = () => {
+      console.info("[TeacherPresence] Socket.IO connected:", socket.id);
+      void syncOnlineStatuses();
+    };
+    const onConnectError = (error: Error) => {
+      console.warn("[TeacherPresence] Socket.IO connection error:", error.message);
+    };
+    const onDisconnect = (reason: string) => {
+      console.info("[TeacherPresence] Socket.IO disconnected:", reason);
+    };
+    const onFocus = () => { void syncOnlineStatuses(); };
+
+    socket.on("student_online", onStudentOnline);
+    socket.on("connect", onConnect);
+    socket.on("connect_error", onConnectError);
+    socket.on("disconnect", onDisconnect);
+    window.addEventListener("focus", onFocus);
+    // Polling helps only when the existing teacher API includes isOnline.
+    const timer = window.setInterval(() => { void syncOnlineStatuses(); }, 30000);
+    void syncOnlineStatuses();
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+      socket.off("student_online", onStudentOnline);
+      socket.off("connect", onConnect);
+      socket.off("connect_error", onConnectError);
+      socket.off("disconnect", onDisconnect);
+      socket.disconnect();
+    };
+  }, []);
+
   // Fetch classes and approved students belonging to the teacher
   const fetchClassesAndStudents = async (token?: string) => {
     const currentToken = token || localStorage.getItem("token");
@@ -110,6 +229,31 @@ export default function ViewClassesPage() {
       ]);
       setClasses(classesRes.data);
       setClassRequests(requestsRes.data);
+      // Keep an exact list of IDs visible to this teacher for diagnosing
+      // mismatches between populated studentId and Socket.IO studentId.
+      const initialStatuses: Record<string, boolean> = {};
+      const ids = new Set<string>();
+      if (Array.isArray(requestsRes.data)) {
+        requestsRes.data.forEach((request: any) => {
+          const student = request?.studentId;
+          const id = getPresenceStudentId(student);
+          if (!id) return;
+          ids.add(id);
+          if (typeof student?.isOnline === "boolean") {
+            initialStatuses[id] = student.isOnline;
+          }
+        });
+      }
+      knownStudentIdsRef.current = ids;
+      setOnlineStudentStatuses(prev => ({
+        ...initialStatuses,
+        ...prev,
+        ...livePresenceRef.current,
+      }));
+      console.info("[TeacherPresence] Teacher class requests loaded:", {
+        studentCount: ids.size,
+        withIsOnline: Object.keys(initialStatuses).length,
+      });
     } catch (err) {
       console.error("Error fetching classes or students:", err);
     } finally {
@@ -780,13 +924,24 @@ export default function ViewClassesPage() {
                             const student = req.studentId;
                             if (!student) return null;
 
+                            const studentId = getPresenceStudentId(student);
+                            const isStudentOnline = onlineStudentStatuses[studentId] ?? (student.isOnline === true);
+
                             return (
                               <div key={req._id} className={`p-3 rounded-xl border flex items-start gap-2.5 transition-colors ${darkMode ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50 border-slate-200/80"}`}>
-                                <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 shrink-0 flex items-center justify-center border">
-                                  {student.profileImage ? (
-                                    <img src={getStudentProfileImageUrl(student.profileImage) || ""} alt="" className="w-full h-full object-cover" />
-                                  ) : (
-                                    <User size={15} className="text-slate-400" />
+                                <div className="relative w-8 h-8 shrink-0 overflow-visible">
+                                  <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center border">
+                                    {student.profileImage ? (
+                                      <img src={getStudentProfileImageUrl(student.profileImage) || ""} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <User size={15} className="text-slate-400" />
+                                    )}
+                                  </div>
+                                  {isStudentOnline && (
+                                    <span className="absolute -bottom-0.5 -right-0.5 z-10 flex h-3 w-3" title="Online Now" aria-label="Online Now">
+                                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                      <span className={`relative inline-flex h-3 w-3 animate-pulse rounded-full border-2 bg-emerald-500 ${darkMode ? "border-slate-800" : "border-slate-50"}`} />
+                                    </span>
                                   )}
                                 </div>
                                 <div className="space-y-0.5 text-[11px] flex-1 overflow-hidden">
