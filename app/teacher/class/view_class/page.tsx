@@ -6,6 +6,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { io } from "socket.io-client";
+import { createPortal } from "react-dom";
 import { 
   Trash2, 
   Calendar, 
@@ -53,6 +54,19 @@ const getPresenceStudentId = (value: any): string => {
   return "";
 };
 
+// Only the student avatar/name appear on the class card; the full name stays in the popover.
+const shortStudentName = (name?: string) => Array.from(name || "Student").slice(0, 6).join("");
+
+type StudentPopupState = {
+  requestId: string;
+  left: number;
+  width: number;
+  arrowLeft: number;
+  above: boolean;
+  offset: number;
+  maxHeight: number;
+};
+
 export default function ViewClassesPage() {
   const router = useRouter();
   const { darkMode } = useTheme();
@@ -77,9 +91,13 @@ export default function ViewClassesPage() {
   const [currentClassPage, setCurrentClassPage] = useState(1);
   const classesPerPage = 2;
 
-  // Pagination State for Students inside each class (4 students per page)
+  // Pagination State for Students inside each class (10 students in a horizontal row)
   const [studentPages, setStudentPages] = useState<{ [classId: string]: number }>({});
-  const studentsPerPage = 4;
+  const studentsPerPage = 10;
+
+  // Presentation-only glass popover. Presence, enrollment and class logic remain untouched.
+  const [activeStudentPopup, setActiveStudentPopup] = useState<StudentPopupState | null>(null);
+  const studentPopupRef = useRef<HTMLDivElement>(null);
 
   // Edit Form State (Existing + New Fields)
   const [editOnlineLink, setEditOnlineLink] = useState("");
@@ -404,9 +422,219 @@ export default function ViewClassesPage() {
     setStudentPages(prev => ({ ...prev, [classId]: newPage }));
   };
 
+  // Compute an anchor position that is not clipped by the class card or a scroll area.
+  // The popover opens UPWARD beside the avatar whenever the viewport permits it.
+  const toggleStudentPopup = (requestId: string, avatar: HTMLButtonElement) => {
+    if (activeStudentPopup?.requestId === requestId) {
+      setActiveStudentPopup(null);
+      return;
+    }
+
+    const rect = avatar.getBoundingClientRect();
+    const width = Math.max(0, Math.min(350, window.innerWidth - 24));
+    const left = Math.max(12, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 12));
+    const spaceAbove = rect.top - 22;
+    const spaceBelow = window.innerHeight - rect.bottom - 22;
+    const above = spaceAbove >= 340 || spaceAbove >= spaceBelow;
+    const availableSpace = above ? spaceAbove : spaceBelow;
+
+    setActiveStudentPopup({
+      requestId,
+      left,
+      width,
+      above,
+      offset: above ? window.innerHeight - rect.top + 12 : rect.bottom + 12,
+      maxHeight: Math.max(100, Math.min(465, availableSpace - 10)),
+      arrowLeft: Math.max(22, Math.min(width - 22, rect.left + rect.width / 2 - left)),
+    });
+  };
+
+  // Close on outside click, Escape, window scrolling or resizing. Scrolling inside the
+  // details popover itself is allowed, and its click does not dismiss it.
+  useEffect(() => {
+    if (!activeStudentPopup) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (studentPopupRef.current?.contains(event.target as Node)) return;
+      if ((event.target as Element)?.closest?.('[data-student-profile-trigger="true"]')) return;
+      setActiveStudentPopup(null);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveStudentPopup(null);
+    };
+    const handleScroll = (event: Event) => {
+      if (studentPopupRef.current?.contains(event.target as Node)) return;
+      setActiveStudentPopup(null);
+    };
+    const handleResize = () => setActiveStudentPopup(null);
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [activeStudentPopup]);
+
+  useEffect(() => {
+    setActiveStudentPopup(null);
+  }, [studentPages, currentClassPage, searchQuery]);
+
+  const popupRequest = activeStudentPopup
+    ? classRequests.find((request: any) => String(request._id) === activeStudentPopup.requestId)
+    : null;
+  const popupStudent = popupRequest?.studentId;
+  const popupStudentId = getPresenceStudentId(popupStudent);
+  const popupIsOnline = onlineStudentStatuses[popupStudentId] ?? (popupStudent?.isOnline === true);
+
+  // All student details returned by the EXISTING teacher API are available here.
+  // Optional details appear automatically if the API already includes them.
+  const popupFields = popupStudent ? [
+    { label: "Phone number", value: popupStudent.phone, icon: Phone },
+    { label: "Grade", value: popupStudent.grade, icon: User },
+    { label: "School", value: popupStudent.school, icon: Building },
+    { label: "Home address", value: popupStudent.address, icon: MapPin },
+    { label: "Medium", value: popupStudent.medium, icon: User },
+    { label: "Country", value: popupStudent.country, icon: MapPin },
+    { label: "Time zone", value: popupStudent.timeZone, icon: Clock },
+    { label: "Father's name", value: popupStudent.fatherName, icon: User },
+    { label: "Father's phone", value: popupStudent.fatherPhone, icon: Phone },
+    { label: "Mother's name", value: popupStudent.motherName, icon: User },
+    { label: "Mother's phone", value: popupStudent.motherPhone, icon: Phone },
+    { label: "Guardian's name", value: popupStudent.guardianName, icon: User },
+    { label: "Guardian's phone", value: popupStudent.guardianPhone, icon: Phone },
+  ].filter((field) => field.value !== undefined && field.value !== null && String(field.value).trim() !== "") : [];
+
   return (
     <div className={`min-h-screen font-sans p-4 sm:p-6 transition-colors duration-500 ${darkMode ? "bg-slate-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
       
+      {/* Glass student details popover: rendered in a portal to avoid card clipping. */}
+      {typeof document !== "undefined" && activeStudentPopup && popupStudent && createPortal(
+        <div
+          className="student-glass-popup pointer-events-auto fixed z-[9999]"
+          style={{
+            left: activeStudentPopup.left,
+            width: activeStudentPopup.width,
+            ...(activeStudentPopup.above
+              ? { bottom: activeStudentPopup.offset }
+              : { top: activeStudentPopup.offset }),
+          }}
+        >
+          <div
+            ref={studentPopupRef}
+            role="dialog"
+            aria-label={`Details for ${popupStudent.name || "student"}`}
+            className={`relative overflow-y-auto overflow-x-hidden rounded-[26px] border p-3 sm:p-5 shadow-2xl ${
+              darkMode ? "border-white/20 text-white" : "border-white/90 text-slate-800"
+            }`}
+            style={{
+              maxHeight: activeStudentPopup.maxHeight,
+              backdropFilter: "blur(28px) saturate(175%)",
+              WebkitBackdropFilter: "blur(28px) saturate(175%)",
+              // Even frosted finish like the former bottom-right corner.
+              // Keep the glass blur, but remove the bright upper-left reflection.
+              background: darkMode
+                ? "rgba(30,41,59,0.88)"
+                : "rgba(219,233,252,0.80)",
+              boxShadow: darkMode
+                ? "0 26px 68px rgba(0,0,0,0.50), inset 0 -1px 0 rgba(255,255,255,0.10)"
+                : "0 26px 68px rgba(39,70,125,0.22), inset 0 -1px 0 rgba(255,255,255,0.25)",
+            }}
+          >
+            <div className="relative z-10">
+              <div className="mb-3 flex items-start gap-3 border-b border-white/35 pb-3 dark:border-white/15">
+                <div className="relative h-14 w-14 shrink-0">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border-2 border-white/75 bg-white/30 shadow-lg dark:border-white/30 dark:bg-white/10">
+                    {popupStudent.profileImage ? (
+                      <img
+                        src={getStudentProfileImageUrl(popupStudent.profileImage) || ""}
+                        alt={popupStudent.name || "Student"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User size={25} className="text-slate-400" />
+                    )}
+                  </div>
+                  {popupIsOnline && (
+                    <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 animate-pulse rounded-full border-2 border-white bg-emerald-500 dark:border-slate-700" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <h3 className="break-words text-sm font-normal leading-tight">{popupStudent.name || "Student"}</h3>
+                  {popupStudent.email && (
+                    <p className={`mt-1 break-all text-[11px] leading-4 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
+                      {popupStudent.email}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveStudentPopup(null)}
+                  title="Close student details"
+                  aria-label="Close student details"
+                  className={`shrink-0 rounded-full border p-1.5 transition-colors ${darkMode ? "border-white/15 bg-white/10 hover:bg-white/20" : "border-white/80 bg-white/60 hover:bg-white"}`}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {popupFields.map((field) => {
+                  const DetailIcon = field.icon;
+                  return (
+                    <div
+                      key={field.label}
+                      className={`min-w-0 rounded-xl border px-2.5 py-2 ${darkMode ? "border-white/10 bg-white/[0.07]" : "border-white/75 bg-white/45"}`}
+                    >
+                      <div className={`mb-1 flex items-center gap-1 text-[9px] font-bold ${darkMode ? "text-slate-300" : "text-slate-500"}`}>
+                        <DetailIcon size={11} className="shrink-0 text-blue-500 dark:text-sky-300" />
+                        <span>{field.label}</span>
+                      </div>
+                      <p className="break-words text-[11px] font-semibold leading-4">{String(field.value)}</p>
+                    </div>
+                  );
+                })}
+                <div className={`col-span-2 flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${darkMode ? "border-emerald-300/20 bg-emerald-400/10" : "border-emerald-200/80 bg-emerald-50/65"}`}>
+                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-300">
+                    <CheckCircle2 size={13} /> Enrolled in class
+                  </span>
+                  {popupRequest.approvedAt && (
+                    <span className={`text-[9px] font-semibold ${darkMode ? "text-slate-300" : "text-slate-500"}`}>
+                      {new Date(popupRequest.approvedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Floating-glass pointer, aligned with the selected avatar. */}
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute h-3.5 w-3.5 rotate-45 border-white/70 shadow-sm ${
+              darkMode ? "bg-slate-800/90" : "bg-white/90"
+            } ${activeStudentPopup.above ? "-bottom-[7px] border-b border-r" : "-top-[7px] border-l border-t"}`}
+            style={{ left: activeStudentPopup.arrowLeft - 7 }}
+          />
+        </div>,
+        document.body
+      )}
+
+      <style>{`
+        @keyframes studentGlassAppear {
+          from { opacity: 0; transform: translateY(9px) scale(0.96); filter: blur(5px); }
+          to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+        .student-glass-popup { animation: studentGlassAppear 220ms cubic-bezier(0.22,1,0.36,1) both; }
+        @media (prefers-reduced-motion: reduce) {
+          .student-glass-popup { animation: none; }
+        }
+      `}</style>
+
       {/* Class Delete Confirmation Popup */}
       <ClassDeleteConfirmPopup
         isOpen={!!deleteClassId}
@@ -424,7 +652,7 @@ export default function ViewClassesPage() {
         }}
       />
 
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
         
         {/* Header & Search Bar section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -556,13 +784,15 @@ export default function ViewClassesPage() {
                           </span>
                         </div>
 
-                        <h3 className={`text-base font-bold flex items-center gap-2 pt-0.5 ${darkMode ? "text-white" : "text-slate-800"}`}>
-                          <Calendar size={15} className="text-slate-400" /> Every {cls.day}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5">
+                          <h3 className={`text-base font-bold flex items-center gap-2 ${darkMode ? "text-white" : "text-slate-800"}`}>
+                            <Calendar size={15} className="text-slate-400" /> Every {cls.day}
+                          </h3>
 
-                        <p className={`text-[11px] font-medium flex items-center gap-1.5 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-                          <Clock size={13} className="text-slate-400" /> {cls.startTime} - {cls.endTime}
-                        </p>
+                          <p className={`text-[11px] font-medium flex items-center gap-1.5 ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
+                            <Clock size={13} className="text-slate-400" /> {cls.startTime} - {cls.endTime}
+                          </p>
+                        </div>
 
                         {/* Online Link Display */}
                         {cls.mode === 'Online' ? (
@@ -601,7 +831,7 @@ export default function ViewClassesPage() {
                                 </div>
                                 {cls.linkDisplayMode === 'immediate' ? (
                                   <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                                    🟢 Status: Open Immediately (දැන්ම ඕපන් කර ඇත)
+                                    🟢 Status: Link Open
                                   </p>
                                 ) : cls.linkStartDateTime && cls.linkEndDateTime ? (
                                   <p className="text-[10px] text-slate-500 dark:text-slate-400">
@@ -619,7 +849,14 @@ export default function ViewClassesPage() {
                         )}
 
                         {cls.description && (
-                          <p className={`text-[11px] pt-0.5 line-clamp-2 break-all whitespace-pre-wrap ${darkMode ? "text-slate-400" : "text-slate-600"}`}>{cls.description}</p>
+                          <div
+                            role="region"
+                            aria-label="Class description"
+                            tabIndex={0}
+                            className={`max-h-[76px] overflow-y-auto overscroll-contain whitespace-pre-wrap break-words pr-2 pt-0.5 text-[11px] leading-relaxed [scrollbar-width:thin] ${darkMode ? "text-slate-400" : "text-slate-600"}`}
+                          >
+                            {cls.description}
+                          </div>
                         )}
                       </div>
 
@@ -880,7 +1117,7 @@ export default function ViewClassesPage() {
 
                     {/* Enrolled Students Section */}
                     <div className={`pt-4 border-t ${darkMode ? "border-slate-800" : "border-slate-100"}`}>
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                         <h4 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${darkMode ? "text-slate-300" : "text-slate-700"}`}>
                           <Users size={14} className="text-blue-500" /> Enrolled Students ({enrolledStudents.length}{cls.hasBatchLimit ? ` / ${cls.batchLimit}` : ''})
                         </h4>
@@ -919,48 +1156,63 @@ export default function ViewClassesPage() {
                       {enrolledStudents.length === 0 ? (
                         <p className={`text-[11px] italic ${darkMode ? "text-slate-500" : "text-slate-400"}`}>No students have joined this class yet.</p>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          {currentStudents.map((req: any) => {
-                            const student = req.studentId;
-                            if (!student) return null;
+                        // Four student profiles per row on mobile, up to ten on desktop.
+                        // Student pagination still contains ten students per page.
+                        <div className="w-full pb-2">
+                          <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-6 sm:gap-2 lg:grid-cols-10">
+                            {currentStudents.map((req: any) => {
+                              const student = req.studentId;
+                              if (!student) return null;
 
-                            const studentId = getPresenceStudentId(student);
-                            const isStudentOnline = onlineStudentStatuses[studentId] ?? (student.isOnline === true);
+                              const studentId = getPresenceStudentId(student);
+                              const isStudentOnline = onlineStudentStatuses[studentId] ?? (student.isOnline === true);
+                              const isSelected = activeStudentPopup?.requestId === String(req._id);
 
-                            return (
-                              <div key={req._id} className={`p-3 rounded-xl border flex items-start gap-2.5 transition-colors ${darkMode ? "bg-slate-800/40 border-slate-700/60" : "bg-slate-50 border-slate-200/80"}`}>
-                                <div className="relative w-8 h-8 shrink-0 overflow-visible">
-                                  <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-700 flex items-center justify-center border">
-                                    {student.profileImage ? (
-                                      <img src={getStudentProfileImageUrl(student.profileImage) || ""} alt="" className="w-full h-full object-cover" />
-                                    ) : (
-                                      <User size={15} className="text-slate-400" />
+                              return (
+                                <div
+                                  key={req._id}
+                                  className="group flex min-w-0 flex-col items-center gap-1.5 px-1 py-2.5"
+                                >
+                                  <button
+                                    type="button"
+                                    data-student-profile-trigger="true"
+                                    onClick={(event) => toggleStudentPopup(String(req._id), event.currentTarget)}
+                                    aria-label={`View ${student.name || "student"} details`}
+                                    aria-haspopup="dialog"
+                                    aria-expanded={isSelected}
+                                    title={`View ${student.name || "student"}'s details`}
+                                    className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full outline-none transition-transform duration-300 group-hover:scale-110 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 sm:h-11 sm:w-11"
+                                  >
+                                    <span className={`flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 shadow-sm sm:h-11 sm:w-11 ${
+                                      isSelected ? "border-blue-400" : darkMode ? "border-slate-600 bg-slate-700" : "border-white bg-slate-200"
+                                    }`}>
+                                      {student.profileImage ? (
+                                        <img
+                                          src={getStudentProfileImageUrl(student.profileImage) || ""}
+                                          alt={student.name || "Student"}
+                                          className="h-full w-full object-cover"
+                                        />
+                                      ) : (
+                                        <User size={20} className="text-slate-400" />
+                                      )}
+                                    </span>
+                                    {isStudentOnline && (
+                                      <span className="absolute -bottom-0.5 -right-0.5 z-10 flex h-3 w-3" title="Online Now" aria-label="Online Now">
+                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                        <span className={`relative inline-flex h-3 w-3 animate-pulse rounded-full border-2 bg-emerald-500 ${darkMode ? "border-slate-800" : "border-white"}`} />
+                                      </span>
                                     )}
-                                  </div>
-                                  {isStudentOnline && (
-                                    <span className="absolute -bottom-0.5 -right-0.5 z-10 flex h-3 w-3" title="Online Now" aria-label="Online Now">
-                                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                                      <span className={`relative inline-flex h-3 w-3 animate-pulse rounded-full border-2 bg-emerald-500 ${darkMode ? "border-slate-800" : "border-slate-50"}`} />
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="space-y-0.5 text-[11px] flex-1 overflow-hidden">
-                                  <p className={`font-bold truncate ${darkMode ? "text-white" : "text-slate-800"}`}>{student.name}</p>
-                                  <p className={`flex items-center gap-1 truncate ${darkMode ? "text-slate-400" : "text-slate-500"}`}>
-                                    <Mail size={11} className="shrink-0 text-slate-400" /> {student.email}
+                                  </button>
+                                  <p
+                                    className={`w-full truncate text-center text-[10px] font-bold leading-4 ${darkMode ? "text-slate-200" : "text-slate-700"}`}
+                                    title={student.name || "Student"}
+                                  >
+                                    {shortStudentName(student.name)}
                                   </p>
-                                  <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[10px]">
-                                    <span className={`flex items-center gap-1 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
-                                      <Phone size={10} className="text-slate-400" /> {student.phone || "No Phone"}
-                                    </span>
-                                    <span className={`flex items-center gap-1 ${darkMode ? "text-slate-300" : "text-slate-600"}`}>
-                                      <Building size={10} className="text-slate-400" /> {student.school || "No School"} ({student.grade || "N/A"})
-                                    </span>
-                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
