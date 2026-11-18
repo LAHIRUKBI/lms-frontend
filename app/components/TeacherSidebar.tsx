@@ -266,6 +266,7 @@ export default function TeacherSidebar() {
     { name: "My Quizzes", path: "/teacher/materials/my-quize", icon: BookOpenCheck },
     { name: "Classes", path: "/teacher/class/view_class", icon: Eye },
     { name: "Student Marks", path: "/teacher/materials/quize_marks", icon: Award },
+    { name: "Physical class", path: "/teacher/materials/physical-marks-view", icon: Eye },
   ];
 
   return (
